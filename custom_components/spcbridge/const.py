@@ -8,11 +8,11 @@ DOMAIN = "spcbridge"
 
 CONF_SECURE_COM = "secure_com"
 CONF_GET_USERNAME = "get_username"
-CONF_GET_PASSWORD = "get_password"
+CONF_GET_PASSWORD = "get_password"  # noqa: S105
 CONF_PUT_USERNAME = "put_username"
-CONF_PUT_PASSWORD = "put_password"
+CONF_PUT_PASSWORD = "put_password"  # noqa: S105
 CONF_WS_USERNAME = "ws_username"
-CONF_WS_PASSWORD = "ws_password"
+CONF_WS_PASSWORD = "ws_password"  # noqa: S105
 CONF_USERS_DATA = "users_data"
 CONF_AREAS_INCLUDE_DATA = "areas_include_data"
 CONF_ZONES_INCLUDE_DATA = "zones_include_data"
@@ -25,11 +25,11 @@ CONF_USER_IDENTIFY_BY_MAP = "user_identify_by_map"
 
 DEFAULT_BRIDGE_PORT = 8088
 DEFAULT_BRIDGE_GET_USERNAME = "get_user"
-DEFAULT_BRIDGE_GET_PASSWORD = "get_pwd"
+DEFAULT_BRIDGE_GET_PASSWORD = "get_pwd"  # noqa: S105
 DEFAULT_BRIDGE_PUT_USERNAME = "put_user"
-DEFAULT_BRIDGE_PUT_PASSWORD = "put_pwd"
+DEFAULT_BRIDGE_PUT_PASSWORD = "put_pwd"  # noqa: S105
 DEFAULT_BRIDGE_WS_USERNAME = "ws_user"
-DEFAULT_BRIDGE_WS_PASSWORD = "ws_pwd"
+DEFAULT_BRIDGE_WS_PASSWORD = "ws_pwd"  # noqa: S105
 DEFAULT_CONF_CODE = ""
 
 ATTR_ENTRY_DELAY_AWAY = "entry_delay_away"

@@ -1,4 +1,4 @@
-"""Support for acre/Vanderbilt SPC alarm system connected via Lundix's SPC Bridge"""
+"""Support for acre/Vanderbilt SPC alarm system connected via Lundix's SPC Bridge."""
 
 import logging
 
@@ -16,8 +16,14 @@ from homeassistant.core import Event, HomeAssistant, ServiceCall, SupportsRespon
 from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers import (
     aiohttp_client,
+)
+from homeassistant.helpers import (
     config_validation as cv,
+)
+from homeassistant.helpers import (
     device_registry as dr,
+)
+from homeassistant.helpers import (
     entity_registry as er,
 )
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -63,10 +69,12 @@ PLATFORMS = [
 ]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up the SPC component"""
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: C901, PLR0915
+    """Set up the SPC component."""
 
-    async def async_update_callback(command, panel_id, spc_objects=None):
+    async def async_update_callback(
+        command: str, panel_id: str, spc_objects: list | None = None
+    ) -> None:
         if command == "reload":
             device_registry = dr.async_get(hass)
             if device := device_registry.async_get_device(
@@ -99,103 +107,108 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     )
 
     async def async_panel_command(call: ServiceCall) -> None:
-        """Panel command"""
+        """Panel command."""
         device_id = call.data[ATTR_DEVICE_ID]
         device_registry = dr.async_get(hass)
         if (device_info := device_registry.async_get(device_id)) is None:
-            raise vol.Invalid("Invalid device ID specified")
+            msg = "Invalid device ID specified"
+            raise vol.Invalid(msg)
         [unique_id] = [
             identity[1] for identity in device_info.identifiers if identity[0] == DOMAIN
         ]
-        id = unique_id.split("-")
-        if id[1] == "panel":
+        unique_id_parts = unique_id.split("-")
+        if unique_id_parts[1] == "panel":
             command = call.data[ATTR_COMMAND]
             code = call.data[ATTR_CODE]
             spc = hass.data[DOMAIN][device_info.primary_config_entry]
-            err = await spc._panel.async_command(command, code)
-            if isinstance(err, dict):
-                if err.get("code", 0) > 0:
-                    raise ServiceValidationError(err["message"])
+            err = await spc._panel.async_command(command, code)  # noqa: SLF001
+            if isinstance(err, dict) and err.get("code", 0) > 0:
+                raise ServiceValidationError(err["message"])
             if isinstance(err, list):
                 for e in err.values():
                     if e.get("code", 0) > 0:
                         raise ServiceValidationError(e["message"])
 
     async def async_area_command(call: ServiceCall) -> None:
-        """Area command"""
+        """Area command."""
         device_id = call.data[ATTR_DEVICE_ID]
         device_registry = dr.async_get(hass)
         if (device_info := device_registry.async_get(device_id)) is None:
-            raise vol.Invalid("Invalid device ID specified")
+            msg = "Invalid device ID specified"
+            raise vol.Invalid(msg)
 
         [unique_id] = [
             identity[1] for identity in device_info.identifiers if identity[0] == DOMAIN
         ]
-        id = unique_id.split("-")
-        if id[1] == "area" and int(id[2]) > 0:
+        unique_id_parts = unique_id.split("-")
+        if unique_id_parts[1] == "area" and int(unique_id_parts[2]) > 0:
             command = call.data[ATTR_COMMAND]
             code = call.data[ATTR_CODE]
             spc = hass.data[DOMAIN][device_info.primary_config_entry]
-            err = await spc._areas[int(id[2])].async_command(command, code)
+            err = await spc._areas[int(unique_id_parts[2])].async_command(command, code)  # noqa: SLF001
             if err["code"] > 0:
                 raise ServiceValidationError(err["message"])
 
     async def async_zone_command(call: ServiceCall) -> None:
-        """Zone command"""
+        """Zone command."""
         device_id = call.data[ATTR_DEVICE_ID]
         device_registry = dr.async_get(hass)
         if (device_info := device_registry.async_get(device_id)) is None:
-            raise vol.Invalid("Invalid device ID specified")
+            msg = "Invalid device ID specified"
+            raise vol.Invalid(msg)
         [unique_id] = [
             identity[1] for identity in device_info.identifiers if identity[0] == DOMAIN
         ]
-        id = unique_id.split("-")
-        if id[1] == "zone" and int(id[2]) > 0:
+        unique_id_parts = unique_id.split("-")
+        if unique_id_parts[1] == "zone" and int(unique_id_parts[2]) > 0:
             command = call.data[ATTR_COMMAND]
             code = call.data[ATTR_CODE]
             spc = hass.data[DOMAIN][device_info.primary_config_entry]
-            err = await spc._zones[int(id[2])].async_command(command, code)
+            err = await spc._zones[int(unique_id_parts[2])].async_command(command, code)  # noqa: SLF001
             if err["code"] > 0:
                 raise ServiceValidationError(err["message"])
 
     async def async_output_command(call: ServiceCall) -> None:
-        """Output command"""
+        """Output command."""
         device_id = call.data[ATTR_DEVICE_ID]
         device_registry = dr.async_get(hass)
         if (device_info := device_registry.async_get(device_id)) is None:
-            raise vol.Invalid("Invalid device ID specified")
+            msg = "Invalid device ID specified"
+            raise vol.Invalid(msg)
         [unique_id] = [
             identity[1] for identity in device_info.identifiers if identity[0] == DOMAIN
         ]
-        id = unique_id.split("-")
-        if id[1] == "output" and int(id[2]) > 0:
+        unique_id_parts = unique_id.split("-")
+        if unique_id_parts[1] == "output" and int(unique_id_parts[2]) > 0:
             command = call.data[ATTR_COMMAND]
             code = call.data[ATTR_CODE]
             spc = hass.data[DOMAIN][device_info.primary_config_entry]
-            err = await spc._outputs[int(id[2])].async_command(command, code)
+            output_id = int(unique_id_parts[2])
+            err = await spc._outputs[output_id].async_command(command, code)  # noqa: SLF001
             if err["code"] > 0:
                 raise ServiceValidationError(err["message"])
 
     async def async_door_command(call: ServiceCall) -> None:
-        """Door command"""
+        """Door command."""
         device_id = call.data[ATTR_DEVICE_ID]
         device_registry = dr.async_get(hass)
         if (device_info := device_registry.async_get(device_id)) is None:
-            raise vol.Invalid("Invalid device ID specified")
+            msg = "Invalid device ID specified"
+            raise vol.Invalid(msg)
         [unique_id] = [
             identity[1] for identity in device_info.identifiers if identity[0] == DOMAIN
         ]
-        id = unique_id.split("-")
-        if id[1] == "door" and int(id[2]) > 0:
+        unique_id_parts = unique_id.split("-")
+        if unique_id_parts[1] == "door" and int(unique_id_parts[2]) > 0:
             command = call.data[ATTR_COMMAND]
             code = call.data[ATTR_CODE]
             spc = hass.data[DOMAIN][device_info.primary_config_entry]
-            err = await spc._doors[int(id[2])].async_command(command, code)
+            err = await spc._doors[int(unique_id_parts[2])].async_command(command, code)  # noqa: SLF001
             if err["code"] > 0:
                 raise ServiceValidationError(err["message"])
 
     async def async_get_panel_arm_status(call: ServiceCall) -> dict | None:
-        """Get area arm status"""
+        """Get area arm status."""
         arm_mode = ""
         _arm_mode = call.data["arm_mode"]
         if _arm_mode.startswith("set_a"):
@@ -210,21 +223,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         device_id = call.data[ATTR_DEVICE_ID]
         device_registry = dr.async_get(hass)
         if (device_info := device_registry.async_get(device_id)) is None:
-            raise vol.Invalid("Invalid device ID specified")
+            msg = "Invalid device ID specified"
+            raise vol.Invalid(msg)
         [unique_id] = [
             identity[1] for identity in device_info.identifiers if identity[0] == DOMAIN
         ]
-        id = unique_id.split("-")
-        if arm_mode != "" and id[1] == "panel":
+        unique_id_parts = unique_id.split("-")
+        if arm_mode != "" and unique_id_parts[1] == "panel":
             try:
                 spc = hass.data[DOMAIN][device_info.primary_config_entry]
                 data = await spc.async_get_arm_status(arm_mode)
                 return {"area": {item["area_id"]: item["reasons"] for item in data}}
             except Exception as err:
                 raise ServiceValidationError(err) from err
+        return None
 
     async def async_get_area_arm_status(call: ServiceCall) -> dict | None:
-        """Get area arm status"""
+        """Get area arm status."""
         arm_mode = ""
         _arm_mode = call.data["arm_mode"]
         if _arm_mode.startswith("set_a"):
@@ -239,18 +254,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         device_id = call.data[ATTR_DEVICE_ID]
         device_registry = dr.async_get(hass)
         if (device_info := device_registry.async_get(device_id)) is None:
-            raise vol.Invalid("Invalid device ID specified")
+            msg = "Invalid device ID specified"
+            raise vol.Invalid(msg)
         [unique_id] = [
             identity[1] for identity in device_info.identifiers if identity[0] == DOMAIN
         ]
-        id = unique_id.split("-")
-        if arm_mode != "" and id[1] == "area" and int(id[2]) > 0:
+        unique_id_parts = unique_id.split("-")
+        area_id = int(unique_id_parts[2]) if len(unique_id_parts) > 2 else 0  # noqa: PLR2004
+        if arm_mode != "" and unique_id_parts[1] == "area" and area_id > 0:
             try:
                 spc = hass.data[DOMAIN][device_info.primary_config_entry]
-                data = await spc.async_get_arm_status(arm_mode, int(id[2]))
+                data = await spc.async_get_arm_status(arm_mode, area_id)
                 return {"area": {item["area_id"]: item["reasons"] for item in data}}
             except Exception as err:
                 raise ServiceValidationError(err) from err
+        return None
 
     # Websockets client
     session = aiohttp_client.async_get_clientsession(hass, verify_ssl=False)
@@ -284,7 +302,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         await spc.async_load_config()
     except Exception as err:
-        _LOGGER.error("Failed to load configuration from SPC. Retrying. Err: %s", err)
+        _LOGGER.exception("Failed to load configuration from SPC. Retrying.")
         raise ConfigEntryNotReady from err
 
     # Register SPC Bridge
@@ -421,7 +439,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     current_options = {**entry.options}
 
     async def async_reload_entry(hass: HomeAssistant, new_entry: ConfigEntry) -> bool:
-        """Handle configuration changes"""
+        """Handle configuration changes."""
         nonlocal current_options
         new_options = {**new_entry.options}
 
@@ -460,11 +478,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-async def async_remove_changed_devices(
+async def async_remove_changed_devices(  # noqa: PLR0912
     hass: HomeAssistant,
     entry: ConfigEntry,
 ) -> bool:
-    """Remove changed devices"""
+    """Remove changed devices."""
     device_registry = dr.async_get(hass)
     entity_registry = er.async_get(hass)
     try:
@@ -483,11 +501,12 @@ async def async_remove_changed_devices(
                 identifiers={(DOMAIN, device_unique_id)}
             ):
                 for ent in er.async_entries_for_device(
-                    entity_registry, device.id, True
+                    entity_registry, device.id, include_disabled_entries=True
                 ):
-                    if ent.unique_id == entity_unique_id:
-                        if v == "exclude" or v != ent.original_device_class:
-                            device_registry.async_remove_device(device.id)
+                    if ent.unique_id == entity_unique_id and (
+                        v == "exclude" or v != ent.original_device_class
+                    ):
+                        device_registry.async_remove_device(device.id)
 
         for k, v in entry.options[CONF_OUTPUTS_INCLUDE_DATA].items():
             if v != "include":
@@ -505,8 +524,8 @@ async def async_remove_changed_devices(
                 ):
                     device_registry.async_remove_device(device.id)
 
-        return True
-    except Exception as err:
+    except Exception as err:  # noqa: BLE001
         _LOGGER.warning("ERROR Remove Changed Devices: %s", err)
-
-    return False
+        return False
+    else:
+        return True

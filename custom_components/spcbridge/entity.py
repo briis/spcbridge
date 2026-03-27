@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
+from typing import TYPE_CHECKING
+
 from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
-from pyspcbridge.area import Area
-from pyspcbridge.door import Door
-from pyspcbridge.output import Output
-from pyspcbridge.panel import Panel
-from pyspcbridge.zone import Zone
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from pyspcbridge.area import Area
+    from pyspcbridge.door import Door
+    from pyspcbridge.output import Output
+    from pyspcbridge.panel import Panel
+    from pyspcbridge.zone import Zone
 
 from . import (
     SIGNAL_UPDATE_AREA,
@@ -47,7 +51,7 @@ class SpcPanelEntity(Entity):
         )
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to updates"""
+        """Subscribe to updates."""
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
@@ -57,10 +61,10 @@ class SpcPanelEntity(Entity):
         )
 
     @callback
-    def _update_callback(self, id) -> None:
+    def _update_callback(self, entity_id: int) -> None:
         """Call update method."""
-        if self._panel.id == id:
-            self.async_schedule_update_ha_state(True)
+        if self._panel.id == entity_id:
+            self.async_schedule_update_ha_state(force_refresh=True)
 
 
 class SpcAreaEntity(Entity):
@@ -85,7 +89,7 @@ class SpcAreaEntity(Entity):
         )
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to updates"""
+        """Subscribe to updates."""
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
@@ -95,10 +99,10 @@ class SpcAreaEntity(Entity):
         )
 
     @callback
-    def _update_callback(self, id) -> None:
+    def _update_callback(self, entity_id: int) -> None:
         """Call update method."""
-        if self._area.id == id:
-            self.async_schedule_update_ha_state(True)
+        if self._area.id == entity_id:
+            self.async_schedule_update_ha_state(force_refresh=True)
 
 
 class SpcZoneEntity(Entity):
@@ -123,7 +127,7 @@ class SpcZoneEntity(Entity):
         )
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to updates"""
+        """Subscribe to updates."""
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
@@ -133,10 +137,10 @@ class SpcZoneEntity(Entity):
         )
 
     @callback
-    def _update_callback(self, id) -> None:
+    def _update_callback(self, entity_id: int) -> None:
         """Call update method."""
-        if self._zone.id == id:
-            self.async_schedule_update_ha_state(True)
+        if self._zone.id == entity_id:
+            self.async_schedule_update_ha_state(force_refresh=True)
 
 
 class SpcOutputEntity(Entity):
@@ -161,7 +165,7 @@ class SpcOutputEntity(Entity):
         )
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to updates"""
+        """Subscribe to updates."""
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
@@ -171,10 +175,10 @@ class SpcOutputEntity(Entity):
         )
 
     @callback
-    def _update_callback(self, id) -> None:
+    def _update_callback(self, entity_id: int) -> None:
         """Call update method."""
-        if self._output.id == id:
-            self.async_schedule_update_ha_state(True)
+        if self._output.id == entity_id:
+            self.async_schedule_update_ha_state(force_refresh=True)
 
 
 class SpcDoorEntity(Entity):
@@ -199,7 +203,7 @@ class SpcDoorEntity(Entity):
         )
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to updates"""
+        """Subscribe to updates."""
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
@@ -209,7 +213,7 @@ class SpcDoorEntity(Entity):
         )
 
     @callback
-    def _update_callback(self, id) -> None:
+    def _update_callback(self, entity_id: int) -> None:
         """Call update method."""
-        if self._door.id == id:
-            self.async_schedule_update_ha_state(True)
+        if self._door.id == entity_id:
+            self.async_schedule_update_ha_state(force_refresh=True)

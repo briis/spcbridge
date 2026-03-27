@@ -5,14 +5,13 @@ from __future__ import annotations
 import ipaddress
 import logging
 from copy import deepcopy
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries, exceptions
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers.httpx_client import get_async_client as get_http_client
 from homeassistant.helpers.selector import (
@@ -51,7 +50,8 @@ from .const import (
     DOMAIN,
 )
 
-# from .hub import Hub
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigFlowResult
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,21 +67,21 @@ DEFAULT_ZONE_OPTION = "motion"
 DEFAULT_FIRE_ZONE_OPTION = "smoke"
 
 
-def generate_schema(object_type, spc_objects) -> vol.Schema:
+def generate_schema(object_type: str, spc_objects: list) -> vol.Schema:  # noqa: PLR0912
     """Generate schema."""
     schema: dict[vol.Marker, Any] = {}
 
     if object_type == "spc_users":
         for _o in spc_objects:
-            id = _o["id"]
+            obj_id = _o["id"]
             name = _o["name"]
-            schema[vol.Optional(f"label_{id}")] = f"User {id}, {name}"
-            schema[vol.Optional(f"pincode_{id}", default="")] = TextSelector(
+            schema[vol.Optional(f"label_{obj_id}")] = f"User {obj_id}, {name}"
+            schema[vol.Optional(f"pincode_{obj_id}", default="")] = TextSelector(
                 TextSelectorConfig(
                     prefix="Keypad Code: ", type=TextSelectorType.PASSWORD
                 )
             )
-            schema[vol.Optional(f"password_{id}", default="")] = TextSelector(
+            schema[vol.Optional(f"password_{obj_id}", default="")] = TextSelector(
                 TextSelectorConfig(
                     prefix="SPC Password: ", type=TextSelectorType.PASSWORD
                 )
@@ -91,10 +91,10 @@ def generate_schema(object_type, spc_objects) -> vol.Schema:
         options = []
         defaults = []
         for _o in spc_objects:
-            id = _o["id"]
+            obj_id = _o["id"]
             name = _o["name"]
-            options.append({"value": f"area_{id}", "label": name})
-            defaults.append(f"area_{id}")
+            options.append({"value": f"area_{obj_id}", "label": name})
+            defaults.append(f"area_{obj_id}")
 
         schema[vol.Required("include_areas", default=defaults)] = SelectSelector(
             SelectSelectorConfig(
@@ -106,23 +106,26 @@ def generate_schema(object_type, spc_objects) -> vol.Schema:
 
     if object_type == "alarm_zones":
         for _o in spc_objects:
-            id = _o["id"]
+            obj_id = _o["id"]
             name = _o["name"]
-            type = _o["type"]
+            zone_type = _o["type"]
             options = [
-                {"value": "exclude", "label": f"{name}[{id}] - Don't include"},
-                {"value": "motion", "label": f"{name}[{id}] - Motion sensor"},
-                {"value": "door", "label": f"{name}[{id}] - Door contact sensor"},
-                {"value": "window", "label": f"{name}[{id}] - Window contact sensor"},
-                {"value": "smoke", "label": f"{name}[{id}] - Smoke sensor"},
-                {"value": "other", "label": f"{name}[{id}] - Other sensor"},
+                {"value": "exclude", "label": f"{name}[{obj_id}] - Don't include"},
+                {"value": "motion", "label": f"{name}[{obj_id}] - Motion sensor"},
+                {"value": "door", "label": f"{name}[{obj_id}] - Door contact sensor"},
+                {
+                    "value": "window",
+                    "label": f"{name}[{obj_id}] - Window contact sensor",
+                },
+                {"value": "smoke", "label": f"{name}[{obj_id}] - Smoke sensor"},
+                {"value": "other", "label": f"{name}[{obj_id}] - Other sensor"},
             ]
-            if ZoneType(type) == ZoneType.FIRE:
+            if ZoneType(zone_type) == ZoneType.FIRE:
                 default_zone_option = DEFAULT_FIRE_ZONE_OPTION
             else:
                 default_zone_option = DEFAULT_ZONE_OPTION
 
-            schema[vol.Required(f"include_{id}", default=default_zone_option)] = (
+            schema[vol.Required(f"include_{obj_id}", default=default_zone_option)] = (
                 SelectSelector(
                     SelectSelectorConfig(
                         options=options,
@@ -138,10 +141,10 @@ def generate_schema(object_type, spc_objects) -> vol.Schema:
             schema[vol.Optional("no_outputs")] = ""
         else:
             for _o in spc_objects:
-                id = _o["id"]
+                obj_id = _o["id"]
                 name = _o["name"]
-                options.append({"value": f"output_{id}", "label": name})
-                defaults.append(f"output_{id}")
+                options.append({"value": f"output_{obj_id}", "label": name})
+                defaults.append(f"output_{obj_id}")
 
             schema[vol.Required("include_outputs", default=defaults)] = SelectSelector(
                 SelectSelectorConfig(
@@ -158,10 +161,10 @@ def generate_schema(object_type, spc_objects) -> vol.Schema:
             schema[vol.Optional("no_doors")] = ""
         else:
             for _o in spc_objects:
-                id = _o["id"]
+                obj_id = _o["id"]
                 name = _o["name"]
-                options.append({"value": f"door_{id}", "label": name})
-                defaults.append(f"door_{id}")
+                options.append({"value": f"door_{obj_id}", "label": name})
+                defaults.append(f"door_{obj_id}")
 
             schema[vol.Required("include_doors", default=defaults)] = SelectSelector(
                 SelectSelectorConfig(
@@ -174,18 +177,18 @@ def generate_schema(object_type, spc_objects) -> vol.Schema:
     return vol.Schema(schema)
 
 
-def generate_option_schema(object_type, objects) -> vol.Schema:
+def generate_option_schema(object_type: str, objects: dict) -> vol.Schema:  # noqa: PLR0912, PLR0915
     """Generate option schema."""
     schema: dict[vol.Marker, Any] = {}
 
     if object_type == "spc_users":
         for _o in objects.values():
-            id = _o.get("id")
-            if id is not None:
+            obj_id = _o.get("id")
+            if obj_id is not None:
                 name = _o.get("name", "")
-                schema[vol.Optional(f"label_{id}")] = f"User {id}, {name}"
+                schema[vol.Optional(f"label_{obj_id}")] = f"User {obj_id}, {name}"
                 schema[
-                    vol.Optional(f"pincode_{id}", default=_o.get("ha_pincode", ""))
+                    vol.Optional(f"pincode_{obj_id}", default=_o.get("ha_pincode", ""))
                 ] = TextSelector(
                     TextSelectorConfig(
                         prefix="Keypad Code: ",
@@ -193,7 +196,10 @@ def generate_option_schema(object_type, objects) -> vol.Schema:
                     )
                 )
                 schema[
-                    vol.Optional(f"password_{id}", default=_o.get("spc_password", ""))
+                    vol.Optional(
+                        f"password_{obj_id}",
+                        default=_o.get("spc_password", ""),
+                    )
                 ] = TextSelector(
                     TextSelectorConfig(
                         prefix="SPC Password: ", type=TextSelectorType.PASSWORD
@@ -204,12 +210,12 @@ def generate_option_schema(object_type, objects) -> vol.Schema:
         options = []
         defaults = []
         for _o in objects.values():
-            id = _o.get("id")
-            if id is not None:
+            obj_id = _o.get("id")
+            if obj_id is not None:
                 name = _o.get("name")
-                options.append({"value": f"area_{id}", "label": name})
+                options.append({"value": f"area_{obj_id}", "label": name})
                 if _o.get("include"):
-                    defaults.append(f"area_{id}")
+                    defaults.append(f"area_{obj_id}")
 
         schema[vol.Required("include_areas", default=defaults)] = SelectSelector(
             SelectSelectorConfig(
@@ -221,28 +227,31 @@ def generate_option_schema(object_type, objects) -> vol.Schema:
 
     if object_type == "alarm_zones":
         for _o in objects.values():
-            id = _o.get("id")
-            if id is not None:
+            obj_id = _o.get("id")
+            if obj_id is not None:
                 name = _o.get("name")
                 options = [
-                    {"value": "exclude", "label": f"{name}[{id}] - Don't include"},
-                    {"value": "motion", "label": f"{name}[{id}] - Motion sensor"},
-                    {"value": "door", "label": f"{name}[{id}] - Door contact sensor"},
+                    {"value": "exclude", "label": f"{name}[{obj_id}] - Don't include"},
+                    {"value": "motion", "label": f"{name}[{obj_id}] - Motion sensor"},
+                    {
+                        "value": "door",
+                        "label": f"{name}[{obj_id}] - Door contact sensor",
+                    },
                     {
                         "value": "window",
-                        "label": f"{name}[{id}] - Window contact sensor",
+                        "label": f"{name}[{obj_id}] - Window contact sensor",
                     },
-                    {"value": "smoke", "label": f"{name}[{id}] - Smoke sensor"},
-                    {"value": "other", "label": f"{name}[{id}] - Other sensor"},
+                    {"value": "smoke", "label": f"{name}[{obj_id}] - Smoke sensor"},
+                    {"value": "other", "label": f"{name}[{obj_id}] - Other sensor"},
                 ]
                 default_zone_option = _o.get("include")
 
-                schema[vol.Required(f"include_{id}", default=default_zone_option)] = (
-                    SelectSelector(
-                        SelectSelectorConfig(
-                            options=options,
-                            mode=SelectSelectorMode.DROPDOWN,
-                        )
+                schema[
+                    vol.Required(f"include_{obj_id}", default=default_zone_option)
+                ] = SelectSelector(
+                    SelectSelectorConfig(
+                        options=options,
+                        mode=SelectSelectorMode.DROPDOWN,
                     )
                 )
 
@@ -254,12 +263,12 @@ def generate_option_schema(object_type, objects) -> vol.Schema:
             schema[vol.Optional("no_outputs")] = ""
         else:
             for _o in objects.values():
-                id = _o.get("id")
-                if id is not None:
+                obj_id = _o.get("id")
+                if obj_id is not None:
                     name = _o.get("name")
-                    options.append({"value": f"output_{id}", "label": name})
+                    options.append({"value": f"output_{obj_id}", "label": name})
                     if _o.get("include"):
-                        defaults.append(f"output_{id}")
+                        defaults.append(f"output_{obj_id}")
 
             schema[vol.Required("include_outputs", default=defaults)] = SelectSelector(
                 SelectSelectorConfig(
@@ -277,12 +286,12 @@ def generate_option_schema(object_type, objects) -> vol.Schema:
             schema[vol.Optional("no_doors")] = ""
         else:
             for _o in objects.values():
-                id = _o.get("id")
-                if id is not None:
+                obj_id = _o.get("id")
+                if obj_id is not None:
                     name = _o.get("name")
-                    options.append({"value": f"door_{id}", "label": name})
+                    options.append({"value": f"door_{obj_id}", "label": name})
                     if _o.get("include"):
-                        defaults.append(f"door_{id}")
+                        defaults.append(f"door_{obj_id}")
 
             schema[vol.Required("include_doors", default=defaults)] = SelectSelector(
                 SelectSelectorConfig(
@@ -295,11 +304,13 @@ def generate_option_schema(object_type, objects) -> vol.Schema:
     return vol.Schema(schema)
 
 
-def zone_type_to_name(zone_type) -> str:
+def zone_type_to_name(zone_type: int) -> str:
+    """Return the zone type as a human-readable string."""
     return ZoneType(zone_type).name.replace("_", " ").title()
 
 
-def include_mode_to_name(include_mode) -> str:
+def include_mode_to_name(include_mode: str) -> str:  # noqa: PLR0911
+    """Return the include mode as a human-readable string."""
     match include_mode:
         case "include":
             return "<b>Include</b>"
@@ -319,7 +330,8 @@ def include_mode_to_name(include_mode) -> str:
             return "Unknown"
 
 
-def generate_html(step_id, objects) -> str:
+def generate_html(step_id: str, objects: dict) -> str:
+    """Generate HTML for display in config flow step."""
     p = objects.get("panel")
     u = objects.get("users")
     a = objects.get("areas")
@@ -328,6 +340,32 @@ def generate_html(step_id, objects) -> str:
     d = objects.get("doors")
     html = ""
     if step_id == "discovered":
+        user_rows = "".join(
+            f'<tr><td width=20%>{_u.get("id", "-")!s}</td>'
+            f'<td>{_u.get("name", "-")}</td></tr>'
+            for _u in u
+        )
+        area_rows = "".join(
+            f'<tr><td width=20%>{_a.get("id", "-")!s}</td>'
+            f'<td>{_a.get("name", "-")}</td></tr>'
+            for _a in a
+        )
+        zone_rows = "".join(
+            f'<tr><td width=20%>{_z.get("id", "-")!s}</td>'
+            f'<td width=40%>{_z.get("name", "-")}</td>'
+            f'<td>{zone_type_to_name(_z.get("type"))}</td></tr>'
+            for _z in z
+        )
+        output_rows = "".join(
+            f'<tr><td width=20%>{_o.get("id", "-")!s}</td>'
+            f'<td>{_o.get("name", "-")}</td></tr>'
+            for _o in o
+        )
+        door_rows = "".join(
+            f'<tr><td width=20%>{_d.get("id", "-")!s}</td>'
+            f'<td>{_d.get("name", "-")}</td></tr>'
+            for _d in d
+        )
         html = f"""
                 <div>
                   <h3>Panel</h3>
@@ -341,50 +379,53 @@ def generate_html(step_id, objects) -> str:
                 <div>
                   <h3>Users</h3>
                   <table width=100%>
-                    <tbody>
-                       {"".join([f"<tr><td width=20%>{str(_u.get("id","-"))}</td><td>{_u.get("name", "-")}</td></tr>" for _u in u])}
-                    </tbody>
+                    <tbody>{user_rows}</tbody>
                   </table>
                 </div>
                 <br>
                 <div>
                   <h3>Alarm Areas</h3>
                   <table width=100%>
-                    <tbody>
-                       {"".join([f"<tr><td width=20%>{str(_a.get("id","-"))}</td><td>{_a.get("name", "-")}</td></tr>" for _a in a])}
-                    </tbody>
+                    <tbody>{area_rows}</tbody>
                   </table>
                 </div>
                 <br>
                 <div>
                   <h3>Alarm Zones</h3>
                   <table width=100%>
-                    <tbody>
-                       {"".join([f"<tr><td width=20%>{str(_z.get("id","-"))}</td><td width=40%>{_z.get("name", "-")}</td><td>{zone_type_to_name(_z.get("type"))}</td></tr>" for _z in z])}
-                    </tbody>
+                    <tbody>{zone_rows}</tbody>
                   </table>
                 </div>
                 <br>
                 <div>
                   <h3>Outputs</h3>
                   <table width=100%>
-                    <tbody>
-                       {"".join([f"<tr><td width=20%>{str(_o.get("id","-"))}</td><td>{_o.get("name", "-")}</td></tr>" for _o in o])}
-                    </tbody>
+                    <tbody>{output_rows}</tbody>
                   </table>
                 </div>
                 <br>
                 <div>
                   <h3>Door Locks</h3>
                   <table width=100%>
-                    <tbody>
-                       {"".join([f"<tr><td width=20%>{str(_d.get("id","-"))}</td><td>{_d.get("name", "-")}</td></tr>" for _d in d])}
-                    </tbody>
+                    <tbody>{door_rows}</tbody>
                   </table>
                 </div>
                 """
 
     if step_id == "confirm":
+        def _row(obj: dict, width: str = "15%") -> str:
+            obj_id = obj.get("id", "-")
+            name = obj.get("name", "-")
+            mode = include_mode_to_name(obj.get("include_mode", ""))
+            return (
+                f"<tr><td width={width}>{obj_id!s}</td>"
+                f"<td width=40%>{name}</td><td>{mode}</td></tr>"
+            )
+
+        area_rows = "".join(_row(_a) for _a in a)
+        zone_rows = "".join(_row(_z) for _z in z)
+        output_rows = "".join(_row(_o) for _o in o)
+        door_rows = "".join(_row(_d) for _d in d)
         html = f"""
                 <div>
                   <h3>Panel</h3>
@@ -396,36 +437,28 @@ def generate_html(step_id, objects) -> str:
                 <div>
                   <h3>Alarm Areas</h3>
                   <table width=100%>
-                    <tbody>
-                       {"".join([f"<tr><td width=15%>{str(_a.get("id","-"))}</td><td width=40%>{_a.get("name", "-")}</td><td>{include_mode_to_name(_a.get("include_mode", ""))}</td></tr>" for _a in a])}
-                    </tbody>
+                    <tbody>{area_rows}</tbody>
                   </table>
                 </div>
                 <br>
                 <div>
                   <h3>Alarm Zones</h3>
                   <table width=100%>
-                    <tbody>
-                       {"".join([f"<tr><td width=15%>{str(_z.get("id","-"))}</td><td width=40%>{_z.get("name", "-")}</td><td>{include_mode_to_name(_z.get("include_mode", ""))}</td></tr>" for _z in z])}
-                    </tbody>
+                    <tbody>{zone_rows}</tbody>
                   </table>
                 </div>
                 <br>
                 <div>
                   <h3>Outputs</h3>
                   <table width=100%>
-                    <tbody>
-                       {"".join([f"<tr><td width=15%>{str(_o.get("id","-"))}</td><td width=40%>{_o.get("name", "-")}</td><td>{include_mode_to_name(_o.get("include_mode", ""))}</td></tr>" for _o in o])}
-                    </tbody>
+                    <tbody>{output_rows}</tbody>
                   </table>
                 </div>
                 <br>
                 <div>
                   <h3>Door Locks</h3>
                   <table width=100%>
-                    <tbody>
-                       {"".join([f"<tr><td width=15%>{str(_d.get("id","-"))}</td><td width=40%>{_d.get("name", "-")}</td><td>{include_mode_to_name(_d.get("include_mode", ""))}</td></tr>" for _d in d])}
-                    </tbody>
+                    <tbody>{door_rows}</tbody>
                   </table>
                 </div>
                 """
@@ -433,7 +466,8 @@ def generate_html(step_id, objects) -> str:
     return "".join(line.strip() for line in html.splitlines())
 
 
-async def test_connection(hass: HomeAssistant, bridge_data: dict):
+async def test_connection(hass: HomeAssistant, bridge_data: dict) -> dict:
+    """Test the connection to the SPC Bridge."""
     try:
         session = aiohttp_client.async_get_clientsession(hass, verify_ssl=False)
         http_client = get_http_client(hass, verify_ssl=False)
@@ -458,37 +492,36 @@ async def test_connection(hass: HomeAssistant, bridge_data: dict):
 
         spc_panel_id = await spc.test_connection()
         if spc_panel_id is None:
-            raise CannotConnect
+            raise CannotConnect  # noqa: TRY301
+    except Exception as err:
+        _LOGGER.exception("Test connection failed")
+        raise CannotConnect from err
+    else:
         return spc_panel_id
 
-    except Exception as err:
-        _LOGGER.error("Test connection failed")
-        if err:
-            _LOGGER.error(err)
-        raise CannotConnect from err
 
-
-def validate_spc_users_data(data: dict):
-    """Validate SPC user data"""
+def validate_spc_users_data(data: dict) -> dict:
+    """Validate SPC user data."""
     errors = {}
-    HA_PINCODE_SCHEMA = vol.All(vol.Coerce(int), vol.Range(min=0, max=9999999999))
-    SPC_PASSWORD_SCHEMA = vol.All(vol.Coerce(str), vol.Length(min=1, max=16))
+    ha_pincode_schema = vol.All(vol.Coerce(int), vol.Range(min=0, max=9999999999))
+    spc_password_schema = vol.All(vol.Coerce(str), vol.Length(min=1, max=16))
     for user in data.values():
-        id = user.get("id")
-        _name = user.get("name", "")
+        obj_id = user.get("id")
         ha_pincode = user.get("ha_pincode", "")
         if ha_pincode != "":
             try:
-                HA_PINCODE_SCHEMA(ha_pincode)
-            except Exception:
-                errors[f"pincode_{id}"] = "Invalid Keypad code (1 to 10 digits)"
+                ha_pincode_schema(ha_pincode)
+            except Exception:  # noqa: BLE001
+                errors[f"pincode_{obj_id}"] = "Invalid Keypad code (1 to 10 digits)"
 
         spc_password = user.get("spc_password", "")
         if spc_password != "":
             try:
-                SPC_PASSWORD_SCHEMA(spc_password)
-            except Exception:
-                errors[f"password_{id}"] = "Invalid SPC Password (1 to 16 characters)"
+                spc_password_schema(spc_password)
+            except Exception:  # noqa: BLE001
+                errors[f"password_{obj_id}"] = (
+                    "Invalid SPC Password (1 to 16 characters)"
+                )
 
     return errors
 
@@ -520,7 +553,9 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         }
         self.spc_data = {}
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the initial step."""
         errors = {}
         if user_input is not None:
@@ -547,7 +582,9 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_bridge_credentials(self, user_input=None):
+    async def async_step_bridge_credentials(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the credentials step."""
         errors = {}
         if user_input is not None:
@@ -564,12 +601,10 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
 
                 _spc_data = await test_connection(self.hass, bridge_data)
-                if not _spc_data:
-                    raise CannotConnect
+                if not _spc_data or not _spc_data["panel"].get("serial"):
+                    raise CannotConnect  # noqa: TRY301
 
                 _panel_serial = _spc_data["panel"].get("serial")
-                if not _panel_serial:
-                    raise CannotConnect
 
                 await self.async_set_unique_id(_panel_serial)
                 self._abort_if_unique_id_configured()
@@ -609,12 +644,13 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_discovered(self, user_input=None):
+    async def async_step_discovered(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the discovered step."""
         errors = {}
-        if user_input is not None:
-            if not errors:
-                return await self.async_step_user_identify_method()
+        if user_input is not None and not errors:
+            return await self.async_step_user_identify_method()
 
         return self.async_show_form(
             step_id="discovered",
@@ -625,19 +661,19 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def async_step_user_identify_method(self, user_input=None):
+    async def async_step_user_identify_method(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle user identify method step."""
         errors = {}
-        if user_input is not None:
-            if not errors:
-                self.options[CONF_USER_IDENTIFY_METHOD] = user_input[
-                    CONF_USER_IDENTIFY_METHOD
-                ]
-                self.options[CONF_USERS_DATA] = {}
-                if self.options[CONF_USER_IDENTIFY_METHOD] == CONF_USER_IDENTIFY_BY_ID:
-                    return await self.async_step_alarm_areas()
-                else:
-                    return await self.async_step_spc_users()
+        if user_input is not None and not errors:
+            self.options[CONF_USER_IDENTIFY_METHOD] = user_input[
+                CONF_USER_IDENTIFY_METHOD
+            ]
+            self.options[CONF_USERS_DATA] = {}
+            if self.options[CONF_USER_IDENTIFY_METHOD] == CONF_USER_IDENTIFY_BY_ID:
+                return await self.async_step_alarm_areas()
+            return await self.async_step_spc_users()
 
         return self.async_show_form(
             step_id="user_identify_method",
@@ -664,33 +700,33 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_spc_users(self, user_input=None):
+    async def async_step_spc_users(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle SPC users step."""
         errors = {}
-        if user_input is not None:
-            if not errors:
-                users_data = {}
-                for user in self.spc_data["users"]:
-                    id = user.get("id", 0)
-                    if id > 0:
-                        ud = {
-                            "id": id,
-                            "name": user.get("name"),
-                            "ha_pincode": user_input.get(f"pincode_{id}", ""),
-                            "spc_password": user_input.get(f"password_{id}", "")
-                        }
-                        users_data[str(id)] = ud
+        if user_input is not None and not errors:
+            users_data = {}
+            for user in self.spc_data["users"]:
+                obj_id = user.get("id", 0)
+                if obj_id > 0:
+                    ud = {
+                        "id": obj_id,
+                        "name": user.get("name"),
+                        "ha_pincode": user_input.get(f"pincode_{obj_id}", ""),
+                        "spc_password": user_input.get(f"password_{obj_id}", "")
+                    }
+                    users_data[str(obj_id)] = ud
 
-                errors = validate_spc_users_data(users_data)
-                if not errors:
-                    self.options[CONF_USERS_DATA] = users_data
-                    return await self.async_step_alarm_areas()
-                else:
-                    return self.async_show_form(
-                        step_id="spc_users",
-                        data_schema=generate_option_schema("spc_users", users_data),
-                        errors=errors,
-                    )
+            errors = validate_spc_users_data(users_data)
+            if not errors:
+                self.options[CONF_USERS_DATA] = users_data
+                return await self.async_step_alarm_areas()
+            return self.async_show_form(
+                step_id="spc_users",
+                data_schema=generate_option_schema("spc_users", users_data),
+                errors=errors,
+            )
 
         return self.async_show_form(
             step_id="spc_users",
@@ -698,7 +734,9 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_alarm_areas(self, user_input=None):
+    async def async_step_alarm_areas(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the alarm areas select step."""
         errors = {}
         if user_input is not None:
@@ -720,7 +758,9 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_alarm_zones(self, user_input=None):
+    async def async_step_alarm_zones(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the alarm zones select step."""
         errors = {}
         if user_input is not None:
@@ -741,7 +781,9 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_outputs(self, user_input=None):
+    async def async_step_outputs(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the outputs select step."""
         errors = {}
         if user_input is not None:
@@ -763,7 +805,9 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_doors(self, user_input=None):
+    async def async_step_doors(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the door locks select step."""
         errors = {}
         if user_input is not None:
@@ -785,12 +829,13 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_confirm(self, user_input=None):
+    async def async_step_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the confirm step."""
         errors = {}
-        if user_input is not None:
-            if not errors:
-                return self.async_create_entry(
+        if user_input is not None and not errors:
+            return self.async_create_entry(
                     title=f"SPC Bridge [{self.spc_data["panel"].get("serial")}]",
                     data=self.data,
                     options=self.options,
@@ -820,8 +865,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self.config_data = config_entry.data
 
     async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+        self, _user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Manage the options."""
         return self.async_show_menu(
             step_id="init",
@@ -835,7 +880,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             ],
         )
 
-    async def async_step_option_user_identify_method(self, user_input=None):
+    async def async_step_option_user_identify_method(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the user identify method option step."""
         if user_input is not None:
             if user_input[CONF_USER_IDENTIFY_METHOD] == CONF_USER_IDENTIFY_BY_ID:
@@ -843,8 +890,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 options.update(user_input)
                 options[CONF_USERS_DATA] = {}
                 return self.async_create_entry(title="", data=options)
-            else:
-                return await self.async_step_option_spc_users()
+            return await self.async_step_option_spc_users()
 
         data_schema = vol.Schema(
             {
@@ -878,7 +924,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_option_spc_users(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the spc users option step."""
         spc = self.hass.data[DOMAIN][self.config_entry.entry_id]
         errors = {}
@@ -896,12 +942,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 options[CONF_USER_IDENTIFY_METHOD] = CONF_USER_IDENTIFY_BY_MAP
                 options[CONF_USERS_DATA] = users_data
                 return self.async_create_entry(title="", data=options)
-            else:
-                return self.async_show_form(
-                    step_id="option_spc_users",
-                    data_schema=generate_option_schema("spc_users", users_data),
-                    errors=errors,
-                )
+            return self.async_show_form(
+                step_id="option_spc_users",
+                data_schema=generate_option_schema("spc_users", users_data),
+                errors=errors,
+            )
 
         _users_data = self.config_entry.options[CONF_USERS_DATA]
         users_data = {}
@@ -921,7 +966,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             errors=errors,
         )
 
-    async def async_step_option_bridge(self, user_input=None):
+    async def async_step_option_bridge(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the bridge option step."""
         errors = {}
         default_ip_address = self.config_entry.options[CONF_IP_ADDRESS]
@@ -952,7 +999,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             errors=errors,
         )
 
-    async def async_step_option_bridge_credentials(self, user_input=None):
+    async def async_step_option_bridge_credentials(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the bridge credentials option step."""
         errors = {}
         default_values = {
@@ -970,14 +1019,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 self.bridge_data.update(user_input)
                 _spc_data = await test_connection(self.hass, self.bridge_data)
                 if _spc_data is None or _spc_data.get("panel") is None:
-                    raise CannotConnect
+                    raise CannotConnect  # noqa: TRY301
 
                 _panel_serial = _spc_data["panel"].get("serial")
                 if (
                     _panel_serial is None
                     or _panel_serial != self.config_entry.unique_id
                 ):
-                    raise CannotConnect
+                    raise CannotConnect  # noqa: TRY301
 
             except CannotConnect:
                 errors["base"] = "cannot_connect"
@@ -1014,7 +1063,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             errors=errors,
         )
 
-    async def async_step_option_alarm_areas(self, user_input=None):
+    async def async_step_option_alarm_areas(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the alarm areas option step."""
         spc = self.hass.data[DOMAIN][self.config_entry.entry_id]
         if user_input is not None:
@@ -1046,7 +1097,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             errors={},
         )
 
-    async def async_step_option_alarm_zones(self, user_input=None):
+    async def async_step_option_alarm_zones(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the alarm zones option step."""
         spc = self.hass.data[DOMAIN][self.config_entry.entry_id]
         if user_input is not None:
@@ -1078,7 +1131,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             errors={},
         )
 
-    async def async_step_option_outputs(self, user_input=None):
+    async def async_step_option_outputs(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the outputs option step."""
         spc = self.hass.data[DOMAIN][self.config_entry.entry_id]
         if user_input is not None:
@@ -1110,7 +1165,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             errors={},
         )
 
-    async def async_step_option_doors(self, user_input=None):
+    async def async_step_option_doors(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the doors option step."""
         spc = self.hass.data[DOMAIN][self.config_entry.entry_id]
         if user_input is not None:

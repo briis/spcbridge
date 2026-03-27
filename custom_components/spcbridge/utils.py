@@ -1,3 +1,5 @@
+"""Utility functions for SPCBridge."""
+
 from ipaddress import IPv6Address, ip_address
 
 from pyspcbridge.const import ArmMode, DoorMode
@@ -13,7 +15,8 @@ ARM_MODE_TO_NAME = {
 }
 
 
-def arm_mode_to_name(mode):
+def arm_mode_to_name(mode: ArmMode) -> str:
+    """Return the name for the given arm mode."""
     return ARM_MODE_TO_NAME.get(mode, "unknown")
 
 
@@ -24,7 +27,8 @@ DOOR_MODE_TO_NAME = {
 }
 
 
-def door_mode_to_name(mode):
+def door_mode_to_name(mode: DoorMode) -> str:
+    """Return the name for the given door mode."""
     return DOOR_MODE_TO_NAME.get(mode, "unknown")
 
 

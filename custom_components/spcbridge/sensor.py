@@ -1,18 +1,21 @@
-"""SPC"""
+"""SPC."""
 
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.json import json_loads
-from pyspcbridge import SpcBridge
-from pyspcbridge.area import Area
-from pyspcbridge.door import Door
-from pyspcbridge.panel import Panel
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+    from pyspcbridge import SpcBridge
+    from pyspcbridge.area import Area
+    from pyspcbridge.door import Door
+    from pyspcbridge.panel import Panel
 
 from .const import CONF_AREAS_INCLUDE_DATA, CONF_DOORS_INCLUDE_DATA, DOMAIN
 from .entity import SpcAreaEntity, SpcDoorEntity, SpcPanelEntity
@@ -26,21 +29,26 @@ async def async_setup_entry(
 ) -> None:
     """Set up SPC sensors based on config entry."""
     api: SpcBridge = hass.data[DOMAIN][entry.entry_id]
-    entities = []
-    entities.append(SpcPanelArmModeSensor(entry, api.panel))
-    entities.append(SpcPanelEventSensor(entry, api.panel))
+    entities: list = [
+        SpcPanelArmModeSensor(entry, api.panel),
+        SpcPanelEventSensor(entry, api.panel),
+    ]
 
-    for area in api.areas.values():
-        if entry.options[CONF_AREAS_INCLUDE_DATA].get(str(area.id)) == "include":
-            entities.append(SpcAreaArmModeSensor(entry, area))
+    entities.extend(
+        SpcAreaArmModeSensor(entry, area)
+        for area in api.areas.values()
+        if entry.options[CONF_AREAS_INCLUDE_DATA].get(str(area.id)) == "include"
+    )
 
     for door in api.doors.values():
         if entry.options[CONF_DOORS_INCLUDE_DATA].get(str(door.id)) == "include":
-            entities.append(SpcDoorModeSensor(entry, door))
-            entities.append(SpcDoorEntryGrantedSensor(entry, door))
-            entities.append(SpcDoorEntryDeniedSensor(entry, door))
-            entities.append(SpcDoorExitGrantedSensor(entry, door))
-            entities.append(SpcDoorExitDeniedSensor(entry, door))
+            entities.extend([
+                SpcDoorModeSensor(entry, door),
+                SpcDoorEntryGrantedSensor(entry, door),
+                SpcDoorEntryDeniedSensor(entry, door),
+                SpcDoorExitGrantedSensor(entry, door),
+                SpcDoorExitDeniedSensor(entry, door),
+            ])
 
     async_add_entities(entities)
 
@@ -67,10 +75,12 @@ class SpcPanelArmModeSensor(SpcPanelEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
+        """Return the current arm mode."""
         return arm_mode_to_name(self._panel.mode)
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict:
+        """Return extra state attributes."""
         return {
             "title": "System",
             "unique_id": self._attr_unique_id,
@@ -84,12 +94,12 @@ class SpcPanelArmModeSensor(SpcPanelEntity, SensorEntity):
             "exittime": self._panel.exittime,
             "entrytime": self._panel.entrytime,
             "spc_event": self._panel.event,
-            "area_ids": [a.id for a in self._panel._areas],
+            "area_ids": [a.id for a in self._panel._areas],  # noqa: SLF001
         }
 
     @property
     def changed_by(self) -> str:
-        """Return the user who last changed panel arm mode"""
+        """Return the user who last changed panel arm mode."""
         return self._panel.changed_by
 
 
@@ -105,14 +115,12 @@ class SpcPanelEventSensor(SpcPanelEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
+        """Return the current event value."""
         value = ""
         if self._panel.event != "":
-            m = []
             event = json_loads(self._panel.event)
             keys = ["ev_desc", "area_name", "zone_name", "mg_name", "door_name"]
-            for key in keys:
-                if v := event.get(key):
-                    m.append(v)
+            m = [v for key in keys if (v := event.get(key))]
             value = " - ".join(m)
         return value
 
@@ -130,10 +138,12 @@ class SpcAreaArmModeSensor(SpcAreaEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
+        """Return the current arm mode."""
         return arm_mode_to_name(self._area.mode)
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict:
+        """Return extra state attributes."""
         return {
             "unique_id": self._attr_unique_id,
             "title": self._area.name or f"Area {self._area.id}",
@@ -152,17 +162,17 @@ class SpcAreaArmModeSensor(SpcAreaEntity, SensorEntity):
 
     @property
     def changed_by(self) -> str:
-        """Return the user who last changed arm mode"""
+        """Return the user who last changed arm mode."""
         return self._area.changed_by
 
     @property
     def last_disarmed_user(self) -> str:
-        """Return the user who last disarmed the area"""
+        """Return the user who last disarmed the area."""
         return self._area.unset_user
 
     @property
     def last_armed_user(self) -> str:
-        """Return the user who last armed the area"""
+        """Return the user who last armed the area."""
         return self._area.set_user
 
 
@@ -179,10 +189,12 @@ class SpcDoorModeSensor(SpcDoorEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
+        """Return the current door mode."""
         return door_mode_to_name(self._door.mode)
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict:
+        """Return extra state attributes."""
         return {
             "unique_id": self._attr_unique_id,
             "name": self._door.name,
@@ -202,6 +214,7 @@ class SpcDoorEntryGrantedSensor(SpcDoorEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
+        """Return the last entry granted user."""
         return self._door.entry_granted
 
 
@@ -217,6 +230,7 @@ class SpcDoorEntryDeniedSensor(SpcDoorEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
+        """Return the last entry denied user."""
         return self._door.entry_denied
 
 
@@ -232,6 +246,7 @@ class SpcDoorExitGrantedSensor(SpcDoorEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
+        """Return the last exit granted user."""
         return self._door.exit_granted
 
 
@@ -247,4 +262,5 @@ class SpcDoorExitDeniedSensor(SpcDoorEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
+        """Return the last exit denied user."""
         return self._door.exit_denied

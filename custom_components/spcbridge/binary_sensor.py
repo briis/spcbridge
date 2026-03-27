@@ -1,21 +1,24 @@
-"""Support for SPC alarm status and states"""
+"""Support for SPC alarm status and states."""
 
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from pyspcbridge import SpcBridge
-from pyspcbridge.area import Area
-from pyspcbridge.output import Output
-from pyspcbridge.panel import Panel
-from pyspcbridge.zone import Zone
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+    from pyspcbridge import SpcBridge
+    from pyspcbridge.area import Area
+    from pyspcbridge.output import Output
+    from pyspcbridge.panel import Panel
+    from pyspcbridge.zone import Zone
 
 from .const import (
     CONF_AREAS_INCLUDE_DATA,
@@ -28,7 +31,7 @@ from .entity import SpcAreaEntity, SpcOutputEntity, SpcPanelEntity, SpcZoneEntit
 _LOGGER = logging.getLogger(__name__)
 
 
-def _get_device_class(include_mode) -> BinarySensorDeviceClass | None:
+def _get_device_class(include_mode: str) -> BinarySensorDeviceClass | None:
     return {
         "exclude": None,
         "motion": BinarySensorDeviceClass.MOTION,
@@ -44,37 +47,44 @@ async def async_setup_entry(
 ) -> None:
     """Set up SPC binary sensors based on config entry."""
     api: SpcBridge = hass.data[DOMAIN][entry.entry_id]
-    entities = []
-    entities.append(SpcPanelIntrusionBinarySensor(entry, api.panel))
-    entities.append(SpcPanelFireBinarySensor(entry, api.panel))
-    entities.append(SpcPanelTamperBinarySensor(entry, api.panel))
-    entities.append(SpcPanelProblemBinarySensor(entry, api.panel))
-    entities.append(SpcPanelVerifiedBinarySensor(entry, api.panel))
+    entities: list = [
+        SpcPanelIntrusionBinarySensor(entry, api.panel),
+        SpcPanelFireBinarySensor(entry, api.panel),
+        SpcPanelTamperBinarySensor(entry, api.panel),
+        SpcPanelProblemBinarySensor(entry, api.panel),
+        SpcPanelVerifiedBinarySensor(entry, api.panel),
+    ]
 
     included_areas = entry.options[CONF_AREAS_INCLUDE_DATA]
     for area in api.areas.values():
         if included_areas.get(str(area.id)) == "include":
-            entities.append(SpcAreaIntrusionBinarySensor(entry, area))
-            entities.append(SpcAreaFireBinarySensor(entry, area))
-            entities.append(SpcAreaTamperBinarySensor(entry, area))
-            entities.append(SpcAreaProblemBinarySensor(entry, area))
-            entities.append(SpcAreaVerifiedBinarySensor(entry, area))
+            entities.extend([
+                SpcAreaIntrusionBinarySensor(entry, area),
+                SpcAreaFireBinarySensor(entry, area),
+                SpcAreaTamperBinarySensor(entry, area),
+                SpcAreaProblemBinarySensor(entry, area),
+                SpcAreaVerifiedBinarySensor(entry, area),
+            ])
 
     included_zones = entry.options[CONF_ZONES_INCLUDE_DATA]
     for zone in api.zones.values():
-        if id := included_zones.get(str(zone.id)):
-            if device_class := _get_device_class(id):
-                entities.append(SpcZoneStateBinarySensor(entry, zone, device_class))
-                entities.append(SpcZoneAlarmBinarySensor(entry, zone))
-                entities.append(SpcZoneTamperBinarySensor(entry, zone))
-                entities.append(SpcZoneProblemBinarySensor(entry, zone))
-                entities.append(SpcZoneInhibitedBinarySensor(entry, zone))
-                entities.append(SpcZoneIsolatedBinarySensor(entry, zone))
+        include_mode = included_zones.get(str(zone.id))
+        if include_mode and (device_class := _get_device_class(include_mode)):
+            entities.extend([
+                SpcZoneStateBinarySensor(entry, zone, device_class),
+                SpcZoneAlarmBinarySensor(entry, zone),
+                SpcZoneTamperBinarySensor(entry, zone),
+                SpcZoneProblemBinarySensor(entry, zone),
+                SpcZoneInhibitedBinarySensor(entry, zone),
+                SpcZoneIsolatedBinarySensor(entry, zone),
+            ])
 
     included_outputs = entry.options[CONF_OUTPUTS_INCLUDE_DATA]
-    for output in api.outputs.values():
-        if included_outputs.get(str(output.id)) == "include":
-            entities.append(SpcOutputStateBinarySensor(entry, output))
+    entities.extend(
+        SpcOutputStateBinarySensor(entry, output)
+        for output in api.outputs.values()
+        if included_outputs.get(str(output.id)) == "include"
+    )
 
     async_add_entities(entities)
 
@@ -91,6 +101,7 @@ class SpcPanelIntrusionBinarySensor(SpcPanelEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if intrusion is detected."""
         _LOGGER.debug(
             "Entity: %s, State: %s", self._attr_unique_id, self._panel.intrusion
         )
@@ -109,6 +120,7 @@ class SpcPanelFireBinarySensor(SpcPanelEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if fire is detected."""
         _LOGGER.debug("Entity: %s, State: %s", self._attr_unique_id, self._panel.fire)
         return self._panel.fire
 
@@ -125,6 +137,7 @@ class SpcPanelTamperBinarySensor(SpcPanelEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if tamper is detected."""
         _LOGGER.debug("Entity: %s, State: %s", self._attr_unique_id, self._panel.tamper)
         return self._panel.tamper
 
@@ -141,6 +154,7 @@ class SpcPanelProblemBinarySensor(SpcPanelEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if problem is detected."""
         _LOGGER.debug(
             "Entity: %s, State: %s", self._attr_unique_id, self._panel.problem
         )
@@ -159,6 +173,7 @@ class SpcPanelVerifiedBinarySensor(SpcPanelEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if verified alarm is active."""
         _LOGGER.debug(
             "Entity: %s, State: %s", self._attr_unique_id, self._panel.verified
         )
@@ -177,6 +192,7 @@ class SpcAreaIntrusionBinarySensor(SpcAreaEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if intrusion is detected."""
         _LOGGER.debug(
             "Entity: %s, State: %s", self._attr_unique_id, self._area.intrusion
         )
@@ -195,6 +211,7 @@ class SpcAreaFireBinarySensor(SpcAreaEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if fire is detected."""
         _LOGGER.debug("Entity: %s, State: %s", self._attr_unique_id, self._area.fire)
         return self._area.fire
 
@@ -211,6 +228,7 @@ class SpcAreaTamperBinarySensor(SpcAreaEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if tamper is detected."""
         _LOGGER.debug("Entity: %s, State: %s", self._attr_unique_id, self._area.tamper)
         return self._area.tamper
 
@@ -227,6 +245,7 @@ class SpcAreaProblemBinarySensor(SpcAreaEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if problem is detected."""
         _LOGGER.debug("Entity: %s, State: %s", self._attr_unique_id, self._area.problem)
         return self._area.problem
 
@@ -243,6 +262,7 @@ class SpcAreaVerifiedBinarySensor(SpcAreaEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if verified alarm is active."""
         _LOGGER.debug(
             "Entity: %s, State: %s", self._attr_unique_id, self._area.verified
         )
@@ -252,13 +272,19 @@ class SpcAreaVerifiedBinarySensor(SpcAreaEntity, BinarySensorEntity):
 class SpcZoneStateBinarySensor(SpcZoneEntity, BinarySensorEntity):
     """Representation of state of a SPC zone."""
 
-    def __init__(self, entry: ConfigEntry, zone: Zone, device_class) -> None:
+    def __init__(
+        self,
+        entry: ConfigEntry,
+        zone: Zone,
+        device_class: BinarySensorDeviceClass | str | None,
+    ) -> None:
         """Initialize the sensor device."""
         super().__init__(entry=entry, zone=zone, suffix="state")
         self._attr_device_class = device_class
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict:
+        """Return extra state attributes."""
         return {
             "unique_id": self._attr_unique_id,
             "name": self._zone.name,
@@ -266,11 +292,12 @@ class SpcZoneStateBinarySensor(SpcZoneEntity, BinarySensorEntity):
             "inhibited": self._zone.inhibited,
             "isolated": self._zone.isolated,
             "alarm_status": self._zone.alarm_status,
-            "area_name": self._zone._area.name,
+            "area_name": self._zone._area.name,  # noqa: SLF001
         }
 
     @property
     def is_on(self) -> bool:
+        """Return true if zone is open."""
         _LOGGER.debug("Entity: %s, State: %s", self._attr_unique_id, self._zone.state)
         return self._zone.state
 
@@ -287,6 +314,7 @@ class SpcZoneAlarmBinarySensor(SpcZoneEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if zone is in alarm."""
         _LOGGER.debug(
             "Entity: %s, Intrusion: %s, Fire: %s",
             self._attr_unique_id,
@@ -308,6 +336,7 @@ class SpcZoneTamperBinarySensor(SpcZoneEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if tamper is detected."""
         _LOGGER.debug("Entity: %s, State: %s", self._attr_unique_id, self._zone.tamper)
         return self._zone.tamper
 
@@ -324,6 +353,7 @@ class SpcZoneProblemBinarySensor(SpcZoneEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if problem is detected."""
         _LOGGER.debug("Entity: %s, State: %s", self._attr_unique_id, self._zone.problem)
         return self._zone.problem
 
@@ -340,6 +370,7 @@ class SpcZoneInhibitedBinarySensor(SpcZoneEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if zone is inhibited."""
         _LOGGER.debug(
             "Entity: %s, State: %s", self._attr_unique_id, self._zone.inhibited
         )
@@ -358,6 +389,7 @@ class SpcZoneIsolatedBinarySensor(SpcZoneEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if zone is isolated."""
         _LOGGER.debug(
             "Entity: %s, State: %s", self._attr_unique_id, self._zone.isolated
         )
@@ -376,11 +408,13 @@ class SpcOutputStateBinarySensor(SpcOutputEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if output is on."""
         _LOGGER.debug("Entity: %s, State: %s", self._attr_unique_id, self._output.state)
         return self._output.state
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict:
+        """Return extra state attributes."""
         return {
             "unique_id": self._attr_unique_id,
             "name": self._output.name,
