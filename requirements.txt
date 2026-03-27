@@ -4,3 +4,5 @@ pip>=21.3.1
 ruff==0.15.8
 pyspcbridge==0.6.3
 numpy
+zlib_ng
+isal
