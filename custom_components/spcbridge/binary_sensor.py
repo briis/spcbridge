@@ -58,26 +58,30 @@ async def async_setup_entry(
     included_areas = entry.options[CONF_AREAS_INCLUDE_DATA]
     for area in api.areas.values():
         if included_areas.get(str(area.id)) == "include":
-            entities.extend([
-                SpcAreaIntrusionBinarySensor(entry, area),
-                SpcAreaFireBinarySensor(entry, area),
-                SpcAreaTamperBinarySensor(entry, area),
-                SpcAreaProblemBinarySensor(entry, area),
-                SpcAreaVerifiedBinarySensor(entry, area),
-            ])
+            entities.extend(
+                [
+                    SpcAreaIntrusionBinarySensor(entry, area),
+                    SpcAreaFireBinarySensor(entry, area),
+                    SpcAreaTamperBinarySensor(entry, area),
+                    SpcAreaProblemBinarySensor(entry, area),
+                    SpcAreaVerifiedBinarySensor(entry, area),
+                ]
+            )
 
     included_zones = entry.options[CONF_ZONES_INCLUDE_DATA]
     for zone in api.zones.values():
         include_mode = included_zones.get(str(zone.id))
         if include_mode and (device_class := _get_device_class(include_mode)):
-            entities.extend([
-                SpcZoneStateBinarySensor(entry, zone, device_class),
-                SpcZoneAlarmBinarySensor(entry, zone),
-                SpcZoneTamperBinarySensor(entry, zone),
-                SpcZoneProblemBinarySensor(entry, zone),
-                SpcZoneInhibitedBinarySensor(entry, zone),
-                SpcZoneIsolatedBinarySensor(entry, zone),
-            ])
+            entities.extend(
+                [
+                    SpcZoneStateBinarySensor(entry, zone, device_class),
+                    SpcZoneAlarmBinarySensor(entry, zone),
+                    SpcZoneTamperBinarySensor(entry, zone),
+                    SpcZoneProblemBinarySensor(entry, zone),
+                    SpcZoneInhibitedBinarySensor(entry, zone),
+                    SpcZoneIsolatedBinarySensor(entry, zone),
+                ]
+            )
 
     included_outputs = entry.options[CONF_OUTPUTS_INCLUDE_DATA]
     entities.extend(

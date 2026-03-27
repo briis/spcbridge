@@ -341,29 +341,29 @@ def generate_html(step_id: str, objects: dict) -> str:
     html = ""
     if step_id == "discovered":
         user_rows = "".join(
-            f'<tr><td width=20%>{_u.get("id", "-")!s}</td>'
-            f'<td>{_u.get("name", "-")}</td></tr>'
+            f"<tr><td width=20%>{_u.get('id', '-')!s}</td>"
+            f"<td>{_u.get('name', '-')}</td></tr>"
             for _u in u
         )
         area_rows = "".join(
-            f'<tr><td width=20%>{_a.get("id", "-")!s}</td>'
-            f'<td>{_a.get("name", "-")}</td></tr>'
+            f"<tr><td width=20%>{_a.get('id', '-')!s}</td>"
+            f"<td>{_a.get('name', '-')}</td></tr>"
             for _a in a
         )
         zone_rows = "".join(
-            f'<tr><td width=20%>{_z.get("id", "-")!s}</td>'
-            f'<td width=40%>{_z.get("name", "-")}</td>'
-            f'<td>{zone_type_to_name(_z.get("type"))}</td></tr>'
+            f"<tr><td width=20%>{_z.get('id', '-')!s}</td>"
+            f"<td width=40%>{_z.get('name', '-')}</td>"
+            f"<td>{zone_type_to_name(_z.get('type'))}</td></tr>"
             for _z in z
         )
         output_rows = "".join(
-            f'<tr><td width=20%>{_o.get("id", "-")!s}</td>'
-            f'<td>{_o.get("name", "-")}</td></tr>'
+            f"<tr><td width=20%>{_o.get('id', '-')!s}</td>"
+            f"<td>{_o.get('name', '-')}</td></tr>"
             for _o in o
         )
         door_rows = "".join(
-            f'<tr><td width=20%>{_d.get("id", "-")!s}</td>'
-            f'<td>{_d.get("name", "-")}</td></tr>'
+            f"<tr><td width=20%>{_d.get('id', '-')!s}</td>"
+            f"<td>{_d.get('name', '-')}</td></tr>"
             for _d in d
         )
         html = f"""
@@ -413,6 +413,7 @@ def generate_html(step_id: str, objects: dict) -> str:
                 """
 
     if step_id == "confirm":
+
         def _row(obj: dict, width: str = "15%") -> str:
             obj_id = obj.get("id", "-")
             name = obj.get("name", "-")
@@ -714,7 +715,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         "id": obj_id,
                         "name": user.get("name"),
                         "ha_pincode": user_input.get(f"pincode_{obj_id}", ""),
-                        "spc_password": user_input.get(f"password_{obj_id}", "")
+                        "spc_password": user_input.get(f"password_{obj_id}", ""),
                     }
                     users_data[str(obj_id)] = ud
 
@@ -741,7 +742,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             for area in self.spc_data["areas"]:
-                if f"area_{area["id"]}" in user_input["include_areas"]:
+                if f"area_{area['id']}" in user_input["include_areas"]:
                     area["include_mode"] = "include"
                 else:
                     area["include_mode"] = "exclude"
@@ -766,7 +767,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             for zone in self.spc_data["zones"]:
                 zone["include_mode"] = user_input.get(
-                    f"include_{zone["id"]}", "exclude"
+                    f"include_{zone['id']}", "exclude"
                 )
                 self.options[CONF_ZONES_INCLUDE_DATA][str(zone["id"])] = zone[
                     "include_mode"
@@ -788,7 +789,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             for output in self.spc_data["outputs"]:
-                if f"output_{output["id"]}" in user_input["include_outputs"]:
+                if f"output_{output['id']}" in user_input["include_outputs"]:
                     output["include_mode"] = "include"
                 else:
                     output["include_mode"] = "exclude"
@@ -812,7 +813,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             for door in self.spc_data["doors"]:
-                if f"door_{door["id"]}" in user_input["include_doors"]:
+                if f"door_{door['id']}" in user_input["include_doors"]:
                     door["include_mode"] = "include"
                 else:
                     door["include_mode"] = "exclude"
@@ -836,10 +837,10 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None and not errors:
             return self.async_create_entry(
-                    title=f"SPC Bridge [{self.spc_data["panel"].get("serial")}]",
-                    data=self.data,
-                    options=self.options,
-                )
+                title=f"SPC Bridge [{self.spc_data['panel'].get('serial')}]",
+                data=self.data,
+                options=self.options,
+            )
 
         return self.async_show_form(
             step_id="confirm",

@@ -42,13 +42,15 @@ async def async_setup_entry(
 
     for door in api.doors.values():
         if entry.options[CONF_DOORS_INCLUDE_DATA].get(str(door.id)) == "include":
-            entities.extend([
-                SpcDoorModeSensor(entry, door),
-                SpcDoorEntryGrantedSensor(entry, door),
-                SpcDoorEntryDeniedSensor(entry, door),
-                SpcDoorExitGrantedSensor(entry, door),
-                SpcDoorExitDeniedSensor(entry, door),
-            ])
+            entities.extend(
+                [
+                    SpcDoorModeSensor(entry, door),
+                    SpcDoorEntryGrantedSensor(entry, door),
+                    SpcDoorEntryDeniedSensor(entry, door),
+                    SpcDoorExitGrantedSensor(entry, door),
+                    SpcDoorExitDeniedSensor(entry, door),
+                ]
+            )
 
     async_add_entities(entities)
 
