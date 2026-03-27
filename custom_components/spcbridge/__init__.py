@@ -80,9 +80,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             if device := device_registry.async_get_device(
                 identifiers={(DOMAIN, f"{panel_id}-panel-1")}
             ):
-                await hass.config_entries.async_reload(device.primary_config_entry)
+                if device.primary_config_entry:
+                    await hass.config_entries.async_reload(device.primary_config_entry)
 
-        if command == "update":
+        if command == "update" and spc_objects:
             for _object in spc_objects:
                 if isinstance(_object, Panel):
                     async_dispatcher_send(
@@ -125,7 +126,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
             if isinstance(err, dict) and err.get("code", 0) > 0:
                 raise ServiceValidationError(err["message"])
             if isinstance(err, list):
-                for e in err.values():
+                for e in err:
                     if e.get("code", 0) > 0:
                         raise ServiceValidationError(e["message"])
 
@@ -309,7 +310,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     device_registry = dr.async_get(hass)
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, entry.unique_id)},
+        identifiers={(DOMAIN, entry.unique_id or entry.entry_id)},
         manufacturer="Lundix IT",
         model="SPC Bridge",
         name="SPC Bridge",
@@ -438,7 +439,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
 
     current_options = {**entry.options}
 
-    async def async_reload_entry(hass: HomeAssistant, new_entry: ConfigEntry) -> bool:
+    async def async_reload_entry(hass: HomeAssistant, new_entry: ConfigEntry) -> None:
         """Handle configuration changes."""
         nonlocal current_options
         new_options = {**new_entry.options}
