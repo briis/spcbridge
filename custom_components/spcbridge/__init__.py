@@ -501,7 +501,7 @@ async def async_remove_changed_devices(  # noqa: PLR0912
                 identifiers={(DOMAIN, device_unique_id)}
             ):
                 for ent in er.async_entries_for_device(
-                    entity_registry, device.id, include_disabled_entries=True
+                    entity_registry, device.id, include_disabled_entities=True
                 ):
                     if ent.unique_id == entity_unique_id and (
                         v == "exclude" or v != ent.original_device_class
