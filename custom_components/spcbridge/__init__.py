@@ -77,11 +77,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     ) -> None:
         if command == "reload":
             device_registry = dr.async_get(hass)
-            if device := device_registry.async_get_device(
-                identifiers={(DOMAIN, f"{panel_id}-panel-1")}
-            ):
-                if device.primary_config_entry:
-                    await hass.config_entries.async_reload(device.primary_config_entry)
+            if (
+                device := device_registry.async_get_device(
+                    identifiers={(DOMAIN, f"{panel_id}-panel-1")}
+                )
+            ) and device.primary_config_entry:
+                await hass.config_entries.async_reload(device.primary_config_entry)
 
         if command == "update" and spc_objects:
             for _object in spc_objects:

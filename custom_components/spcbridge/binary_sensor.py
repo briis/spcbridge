@@ -33,12 +33,10 @@ _LOGGER = logging.getLogger(__name__)
 
 def _get_device_class(include_mode: str) -> BinarySensorDeviceClass | None:
     return {
-        "exclude": None,
         "motion": BinarySensorDeviceClass.MOTION,
         "door": BinarySensorDeviceClass.DOOR,
         "window": BinarySensorDeviceClass.WINDOW,
         "smoke": BinarySensorDeviceClass.SMOKE,
-        "other": "none",
     }.get(include_mode)
 
 
@@ -47,6 +45,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up SPC binary sensors based on config entry."""
     api: SpcBridge = hass.data[DOMAIN][entry.entry_id]
+    if api.panel is None:
+        return
     entities: list = [
         SpcPanelIntrusionBinarySensor(entry, api.panel),
         SpcPanelFireBinarySensor(entry, api.panel),
@@ -71,7 +71,8 @@ async def async_setup_entry(
     included_zones = entry.options[CONF_ZONES_INCLUDE_DATA]
     for zone in api.zones.values():
         include_mode = included_zones.get(str(zone.id))
-        if include_mode and (device_class := _get_device_class(include_mode)):
+        if include_mode and include_mode != "exclude":
+            device_class = _get_device_class(include_mode)
             entities.extend(
                 [
                     SpcZoneStateBinarySensor(entry, zone, device_class),
@@ -280,7 +281,7 @@ class SpcZoneStateBinarySensor(SpcZoneEntity, BinarySensorEntity):
         self,
         entry: ConfigEntry,
         zone: Zone,
-        device_class: BinarySensorDeviceClass | str | None,
+        device_class: BinarySensorDeviceClass | None,
     ) -> None:
         """Initialize the sensor device."""
         super().__init__(entry=entry, zone=zone, suffix="state")
