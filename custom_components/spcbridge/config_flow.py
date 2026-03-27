@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import aiohttp_client
 from homeassistant.helpers.httpx_client import get_async_client as get_http_client
 from homeassistant.helpers.selector import (
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -99,7 +100,7 @@ def generate_schema(object_type: str, spc_objects: list) -> vol.Schema:  # noqa:
         schema[vol.Required("include_areas", default=defaults)] = SelectSelector(
             SelectSelectorConfig(
                 multiple=True,
-                mode="list",
+                mode=SelectSelectorMode.LIST,
                 options=options,
             )
         )
@@ -109,7 +110,7 @@ def generate_schema(object_type: str, spc_objects: list) -> vol.Schema:  # noqa:
             obj_id = _o["id"]
             name = _o["name"]
             zone_type = _o["type"]
-            options = [
+            options: list[SelectOptionDict] = [
                 {"value": "exclude", "label": f"{name}[{obj_id}] - Don't include"},
                 {"value": "motion", "label": f"{name}[{obj_id}] - Motion sensor"},
                 {"value": "door", "label": f"{name}[{obj_id}] - Door contact sensor"},
@@ -149,7 +150,7 @@ def generate_schema(object_type: str, spc_objects: list) -> vol.Schema:  # noqa:
             schema[vol.Required("include_outputs", default=defaults)] = SelectSelector(
                 SelectSelectorConfig(
                     multiple=True,
-                    mode="list",
+                    mode=SelectSelectorMode.LIST,
                     options=options,
                 )
             )
@@ -169,7 +170,7 @@ def generate_schema(object_type: str, spc_objects: list) -> vol.Schema:  # noqa:
             schema[vol.Required("include_doors", default=defaults)] = SelectSelector(
                 SelectSelectorConfig(
                     multiple=True,
-                    mode="list",
+                    mode=SelectSelectorMode.LIST,
                     options=options,
                 )
             )
@@ -220,7 +221,7 @@ def generate_option_schema(object_type: str, objects: dict) -> vol.Schema:  # no
         schema[vol.Required("include_areas", default=defaults)] = SelectSelector(
             SelectSelectorConfig(
                 multiple=True,
-                mode="list",
+                mode=SelectSelectorMode.LIST,
                 options=options,
             )
         )
@@ -230,7 +231,7 @@ def generate_option_schema(object_type: str, objects: dict) -> vol.Schema:  # no
             obj_id = _o.get("id")
             if obj_id is not None:
                 name = _o.get("name")
-                options = [
+                options: list[SelectOptionDict] = [
                     {"value": "exclude", "label": f"{name}[{obj_id}] - Don't include"},
                     {"value": "motion", "label": f"{name}[{obj_id}] - Motion sensor"},
                     {
@@ -273,7 +274,7 @@ def generate_option_schema(object_type: str, objects: dict) -> vol.Schema:  # no
             schema[vol.Required("include_outputs", default=defaults)] = SelectSelector(
                 SelectSelectorConfig(
                     multiple=True,
-                    mode="list",
+                    mode=SelectSelectorMode.LIST,
                     options=options,
                 )
             )
@@ -296,7 +297,7 @@ def generate_option_schema(object_type: str, objects: dict) -> vol.Schema:  # no
             schema[vol.Required("include_doors", default=defaults)] = SelectSelector(
                 SelectSelectorConfig(
                     multiple=True,
-                    mode="list",
+                    mode=SelectSelectorMode.LIST,
                     options=options,
                 )
             )
@@ -332,12 +333,12 @@ def include_mode_to_name(include_mode: str) -> str:  # noqa: PLR0911
 
 def generate_html(step_id: str, objects: dict) -> str:
     """Generate HTML for display in config flow step."""
-    p = objects.get("panel")
-    u = objects.get("users")
-    a = objects.get("areas")
-    z = objects.get("zones")
-    o = objects.get("outputs")
-    d = objects.get("doors")
+    p = objects.get("panel", {})
+    u = objects.get("users", [])
+    a = objects.get("areas", [])
+    z = objects.get("zones", [])
+    o = objects.get("outputs", [])
+    d = objects.get("doors", [])
     html = ""
     if step_id == "discovered":
         user_rows = "".join(
@@ -731,7 +732,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="spc_users",
-            data_schema=generate_schema("spc_users", self.spc_data.get("users")),
+            data_schema=generate_schema("spc_users", self.spc_data.get("users", [])),
             errors=errors,
         )
 
@@ -755,7 +756,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="alarm_areas",
-            data_schema=generate_schema("alarm_areas", self.spc_data.get("areas")),
+            data_schema=generate_schema("alarm_areas", self.spc_data.get("areas", [])),
             errors=errors,
         )
 
@@ -778,7 +779,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="alarm_zones",
-            data_schema=generate_schema("alarm_zones", self.spc_data.get("zones")),
+            data_schema=generate_schema("alarm_zones", self.spc_data.get("zones", [])),
             errors=errors,
         )
 
@@ -802,7 +803,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="outputs",
-            data_schema=generate_schema("outputs", self.spc_data.get("outputs")),
+            data_schema=generate_schema("outputs", self.spc_data.get("outputs", [])),
             errors=errors,
         )
 
@@ -826,7 +827,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="doors",
-            data_schema=generate_schema("doors", self.spc_data.get("doors")),
+            data_schema=generate_schema("doors", self.spc_data.get("doors", [])),
             errors=errors,
         )
 

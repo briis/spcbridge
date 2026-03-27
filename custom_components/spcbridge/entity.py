@@ -47,7 +47,7 @@ class SpcPanelEntity(Entity):
             serial_number=panel.serial,
             sw_version=panel.firmware,
             manufacturer="Vanderbilt",
-            via_device=(DOMAIN, entry.unique_id),
+            via_device=(DOMAIN, entry.unique_id or ""),
         )
 
     async def async_added_to_hass(self) -> None:
@@ -85,7 +85,7 @@ class SpcAreaEntity(Entity):
             name=area.name,
             model="SPC Alarm Area",
             manufacturer="Vanderbilt",
-            via_device=(DOMAIN, entry.unique_id),
+            via_device=(DOMAIN, entry.unique_id or ""),
         )
 
     async def async_added_to_hass(self) -> None:
@@ -123,7 +123,7 @@ class SpcZoneEntity(Entity):
             name=zone.name,
             model="SPC Alarm Zone",
             manufacturer="Vanderbilt",
-            via_device=(DOMAIN, entry.unique_id),
+            via_device=(DOMAIN, entry.unique_id or ""),
         )
 
     async def async_added_to_hass(self) -> None:
@@ -161,7 +161,7 @@ class SpcOutputEntity(Entity):
             name=output.name,
             model="SPC Output",
             manufacturer="Vanderbilt",
-            via_device=(DOMAIN, entry.unique_id),
+            via_device=(DOMAIN, entry.unique_id or ""),
         )
 
     async def async_added_to_hass(self) -> None:
@@ -199,7 +199,7 @@ class SpcDoorEntity(Entity):
             name=door.name,
             model="SPC Door",
             manufacturer="Vanderbilt",
-            via_device=(DOMAIN, entry.unique_id),
+            via_device=(DOMAIN, entry.unique_id or ""),
         )
 
     async def async_added_to_hass(self) -> None:

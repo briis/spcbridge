@@ -29,6 +29,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up SPC sensors based on config entry."""
     api: SpcBridge = hass.data[DOMAIN][entry.entry_id]
+    if api.panel is None:
+        return
     entities: list = [
         SpcPanelArmModeSensor(entry, api.panel),
         SpcPanelEventSensor(entry, api.panel),
@@ -78,7 +80,9 @@ class SpcPanelArmModeSensor(SpcPanelEntity, SensorEntity):
     @property
     def native_value(self) -> str | None:
         """Return the current arm mode."""
-        return arm_mode_to_name(self._panel.mode)
+        return (
+            arm_mode_to_name(self._panel.mode) if self._panel.mode is not None else None
+        )
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -121,9 +125,10 @@ class SpcPanelEventSensor(SpcPanelEntity, SensorEntity):
         value = ""
         if self._panel.event != "":
             event = json_loads(self._panel.event)
-            keys = ["ev_desc", "area_name", "zone_name", "mg_name", "door_name"]
-            m = [v for key in keys if (v := event.get(key))]
-            value = " - ".join(m)
+            if isinstance(event, dict):
+                keys = ["ev_desc", "area_name", "zone_name", "mg_name", "door_name"]
+                m = [str(v) for key in keys if (v := event.get(key))]
+                value = " - ".join(m)
         return value
 
 
@@ -157,7 +162,7 @@ class SpcAreaArmModeSensor(SpcAreaEntity, SensorEntity):
             "partset_b_name": self._area.b_name,
             "exittime": self._area.exittime,
             "entrytime": self._area.entrytime,
-            "zone_ids": [z.id for z in self._area.zones],
+            "zone_ids": [z.id for z in (self._area.zones or [])],
             "last_disarmed_user": self._area.unset_user,
             "last_armed_user": self._area.set_user,
         }
