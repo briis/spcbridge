@@ -1,4 +1,6 @@
 colorlog==6.10.1
-homeassistant==2026.3.2
+homeassistant==2026.3.3
 pip>=21.3.1
 ruff==0.15.7
+pyspcbridge==0.6.3
+numpy
