@@ -66,6 +66,7 @@ SIGNAL_UPDATE_DOOR = "spc_update_door"
 PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.SENSOR,
+    Platform.ALARM_CONTROL_PANEL,
 ]
 
 
