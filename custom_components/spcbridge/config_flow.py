@@ -28,6 +28,7 @@ from pyspcbridge.const import ZoneType
 
 from .const import (
     CONF_AREAS_INCLUDE_DATA,
+    CONF_CODE,
     CONF_DOORS_INCLUDE_DATA,
     CONF_GET_PASSWORD,
     CONF_GET_USERNAME,
@@ -48,6 +49,7 @@ from .const import (
     DEFAULT_BRIDGE_PUT_USERNAME,
     DEFAULT_BRIDGE_WS_PASSWORD,
     DEFAULT_BRIDGE_WS_USERNAME,
+    DEFAULT_CONF_CODE,
     DOMAIN,
 )
 
@@ -552,6 +554,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_ZONES_INCLUDE_DATA: {},
             CONF_OUTPUTS_INCLUDE_DATA: {},
             CONF_DOORS_INCLUDE_DATA: {},
+            CONF_CODE: DEFAULT_CONF_CODE,
         }
         self.spc_data = {}
 
@@ -879,6 +882,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 "option_alarm_zones",
                 "option_outputs",
                 "option_doors",
+                "option_alarm_code",
             ],
         )
 
@@ -1198,6 +1202,30 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="option_doors",
             data_schema=generate_option_schema("doors", doors_data),
+            errors={},
+        )
+
+    async def async_step_option_alarm_code(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle the default alarm code option step."""
+        if user_input is not None:
+            options = deepcopy({**self.config_entry.options})
+            options[CONF_CODE] = user_input.get(CONF_CODE, DEFAULT_CONF_CODE)
+            return self.async_create_entry(title="", data=options)
+
+        return self.async_show_form(
+            step_id="option_alarm_code",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_CODE,
+                        default=self.config_entry.options.get(
+                            CONF_CODE, DEFAULT_CONF_CODE
+                        ),
+                    ): TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD)),
+                }
+            ),
             errors={},
         )
 

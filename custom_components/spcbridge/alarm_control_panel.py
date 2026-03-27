@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 from pyspcbridge.const import ArmMode
 
-from .const import CONF_AREAS_INCLUDE_DATA, DOMAIN
+from .const import CONF_AREAS_INCLUDE_DATA, CONF_CODE, DEFAULT_CONF_CODE, DOMAIN
 from .entity import SpcAreaEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,7 +59,6 @@ class SpcAreaAlarmControlPanel(SpcAreaEntity, AlarmControlPanelEntity):
     """Representation of an SPC area as an alarm control panel."""
 
     _attr_translation_key = "area_alarm_control_panel"
-    _attr_code_arm_required = True
     _attr_supported_features = (
         AlarmControlPanelEntityFeature.ARM_HOME
         | AlarmControlPanelEntityFeature.ARM_AWAY
@@ -69,6 +68,16 @@ class SpcAreaAlarmControlPanel(SpcAreaEntity, AlarmControlPanelEntity):
     def __init__(self, entry: ConfigEntry, area: Area) -> None:
         """Initialize the alarm control panel."""
         super().__init__(entry=entry, area=area, suffix="alarm_control_panel")
+        self._default_code: str = entry.options.get(CONF_CODE, DEFAULT_CONF_CODE)
+
+    @property
+    def code_arm_required(self) -> bool:
+        """Return whether a code is required for arming."""
+        return not bool(self._default_code)
+
+    def _effective_code(self, code: str | None) -> str | None:
+        """Return the code to use: caller-supplied or the configured default."""
+        return code or self._default_code or None
 
     @property
     def alarm_state(self) -> AlarmControlPanelState | None:
@@ -82,16 +91,16 @@ class SpcAreaAlarmControlPanel(SpcAreaEntity, AlarmControlPanelEntity):
 
     async def async_alarm_disarm(self, code: str | None = None) -> None:
         """Send disarm command."""
-        await self._area.async_command("unset", code)
+        await self._area.async_command("unset", self._effective_code(code))
 
     async def async_alarm_arm_home(self, code: str | None = None) -> None:
         """Send arm Part Set A command."""
-        await self._area.async_command("set_a", code)
+        await self._area.async_command("set_a", self._effective_code(code))
 
     async def async_alarm_arm_night(self, code: str | None = None) -> None:
         """Send arm Part Set B command."""
-        await self._area.async_command("set_b", code)
+        await self._area.async_command("set_b", self._effective_code(code))
 
     async def async_alarm_arm_away(self, code: str | None = None) -> None:
-        """Send arm Full Set command."""
-        await self._area.async_command("set", code)
+        """Send delayed arm Full Set command."""
+        await self._area.async_command("set_delayed", self._effective_code(code))
