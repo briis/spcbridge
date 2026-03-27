@@ -1,6 +1,7 @@
 # spcbridge
 
-**NOTE:** This is a clone from the original Lundix IT Home Assistant Integration. This version is updated to run on Python 3.14 and as such the minimum Home Assistant version has also been changed. The aim is to add an Alarm Panel entity to this integration and that is being worked on right now.
+> [!NOTE]
+> This is a clone from the original Lundix IT Home Assistant Integration. This version is updated to run on Python 3.14 and as such the minimum Home Assistant version has also been changed. The aim is to add an Alarm Panel entity to this integration and that is being worked on right now.
 
 ## Prerequisites
 - Vanderbilt SPC panel, firmware version >= 3.8.5
