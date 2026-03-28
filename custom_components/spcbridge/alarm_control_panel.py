@@ -12,6 +12,8 @@ from homeassistant.components.alarm_control_panel.const import (
     AlarmControlPanelEntityFeature,
     AlarmControlPanelState,
 )
+from homeassistant.core import callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -19,11 +21,13 @@ if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
     from pyspcbridge import SpcBridge
     from pyspcbridge.area import Area
+    from pyspcbridge.panel import Panel
 
 from pyspcbridge.const import ArmMode
 
+from . import SIGNAL_UPDATE_AREA
 from .const import CONF_AREAS_INCLUDE_DATA, CONF_CODE, DEFAULT_CONF_CODE, DOMAIN
-from .entity import SpcAreaEntity
+from .entity import SpcPanelEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,9 +37,11 @@ async def async_setup_entry(
 ) -> None:
     """Set up SPC alarm control panels based on config entry."""
     api: SpcBridge = hass.data[DOMAIN][entry.entry_id]
+    if api.panel is None:
+        return
     included_areas = entry.options[CONF_AREAS_INCLUDE_DATA]
     async_add_entities(
-        SpcAreaAlarmControlPanel(entry, area)
+        SpcAreaAlarmControlPanel(entry, api.panel, area)
         for area in api.areas.values()
         if included_areas.get(str(area.id)) == "include"
     )
@@ -55,8 +61,8 @@ def _alarm_state(area: Area) -> AlarmControlPanelState | None:
     return mode_to_state.get(area.mode)
 
 
-class SpcAreaAlarmControlPanel(SpcAreaEntity, AlarmControlPanelEntity):
-    """Representation of an SPC area as an alarm control panel."""
+class SpcAreaAlarmControlPanel(SpcPanelEntity, AlarmControlPanelEntity):
+    """Alarm control panel for an SPC area, associated with the SPC Bridge device."""
 
     _attr_translation_key = "area_alarm_control_panel"
     _attr_supported_features = (
@@ -65,10 +71,27 @@ class SpcAreaAlarmControlPanel(SpcAreaEntity, AlarmControlPanelEntity):
         | AlarmControlPanelEntityFeature.ARM_NIGHT
     )
 
-    def __init__(self, entry: ConfigEntry, area: Area) -> None:
+    def __init__(self, entry: ConfigEntry, panel: Panel, area: Area) -> None:
         """Initialize the alarm control panel."""
-        super().__init__(entry=entry, area=area, suffix="alarm_control_panel")
+        super().__init__(entry=entry, panel=panel, suffix=f"area_{area.id}_alarm_control_panel")
+        self._area = area
         self._default_code: str = entry.options.get(CONF_CODE, DEFAULT_CONF_CODE)
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to area updates."""
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                f"{SIGNAL_UPDATE_AREA}-{self._entry.unique_id}",
+                self._update_callback,
+            )
+        )
+
+    @callback
+    def _update_callback(self, entity_id: int) -> None:
+        """Call update method."""
+        if self._area.id == entity_id:
+            self.async_schedule_update_ha_state(force_refresh=True)
 
     @property
     def code_arm_required(self) -> bool:
