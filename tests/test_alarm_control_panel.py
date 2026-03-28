@@ -76,7 +76,7 @@ class TestSpcAreaAlarmControlPanel:
         entry = make_entry(code=code)
         area = make_area(**area_kwargs)
         with patch(
-            "custom_components.spcbridge.alarm_control_panel.SpcAreaEntity.__init__",
+            "custom_components.spcbridge.alarm_control_panel.SpcPanelEntity.__init__",
             lambda self, entry, area, _suffix: (
                 setattr(self, "_area", area) or setattr(self, "_entry", entry)
             ),
