@@ -31,3 +31,17 @@ keep-runtime-typing = true
 
 [lint.mccabe]
 max-complexity = 25
+
+[lint.per-file-ignores]
+"tests/**" = [
+    "S101",   # assert is the standard assertion mechanism in pytest
+    "D102",   # test methods do not require docstrings
+    "D103",   # test functions do not require docstrings
+    "D104",   # test packages do not require docstrings
+    "ANN",    # type annotations not required in test helpers
+    "FBT001", # boolean positional args are fine in test helpers
+    "FBT002", # boolean default args are fine in test helpers
+    "SLF001", # accessing private members is acceptable in tests
+    "D101",   # test classes do not require docstrings
+    "S106",   # hardcoded passwords are unavoidable in credential validation tests
+]
