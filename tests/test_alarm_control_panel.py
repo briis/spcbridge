@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from homeassistant.components.alarm_control_panel.const import AlarmControlPanelState
 from pyspcbridge.const import ArmMode
 
@@ -78,8 +77,9 @@ class TestSpcAreaAlarmControlPanel:
         area = make_area(**area_kwargs)
         with patch(
             "custom_components.spcbridge.alarm_control_panel.SpcAreaEntity.__init__",
-            lambda self, entry, area, suffix: setattr(self, "_area", area)
-            or setattr(self, "_entry", entry),
+            lambda self, entry, area, _suffix: (
+                setattr(self, "_area", area) or setattr(self, "_entry", entry)
+            ),
         ):
             panel = SpcAreaAlarmControlPanel.__new__(SpcAreaAlarmControlPanel)
             panel._area = area

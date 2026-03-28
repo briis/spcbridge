@@ -1,6 +1,5 @@
 """Tests for config_flow utility functions."""
 
-import pytest
 from pyspcbridge.const import ZoneType
 
 from custom_components.spcbridge.config_flow import (
@@ -14,7 +13,7 @@ class TestValidateSpcUsersData:
     """Tests for the validate_spc_users_data function."""
 
     def _make_users(self, **fields):
-        """Helper to build a single-user data dict."""
+        """Build a single-user data dict."""
         user = {"id": 1, "name": "Alice", **fields}
         return {1: user}
 
@@ -76,7 +75,12 @@ class TestValidateSpcUsersData:
     def test_multiple_users_one_invalid_pincode(self):
         users = {
             1: {"id": 1, "name": "Alice", "ha_pincode": "1234", "spc_password": ""},
-            2: {"id": 2, "name": "Bob", "ha_pincode": "not_a_number", "spc_password": ""},
+            2: {
+                "id": 2,
+                "name": "Bob",
+                "ha_pincode": "not_a_number",
+                "spc_password": "",
+            },
         }
         errors = validate_spc_users_data(users)
         assert "pincode_2" in errors

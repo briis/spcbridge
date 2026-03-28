@@ -2,7 +2,6 @@
 
 from unittest.mock import MagicMock
 
-import pytest
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 
 from custom_components.spcbridge.binary_sensor import (
@@ -153,7 +152,9 @@ class TestAreaBinarySensors:
         assert sensor.is_on is True
 
     def test_intrusion_is_off(self):
-        sensor = SpcAreaIntrusionBinarySensor(_make_entry(), _make_area(intrusion=False))
+        sensor = SpcAreaIntrusionBinarySensor(
+            _make_entry(), _make_area(intrusion=False)
+        )
         assert sensor.is_on is False
 
     def test_fire_is_on(self):
@@ -180,17 +181,23 @@ class TestAreaBinarySensors:
 class TestZoneBinarySensors:
     def test_zone_state_is_on_when_open(self):
         zone = _make_zone(state=True)
-        sensor = SpcZoneStateBinarySensor(_make_entry(), zone, BinarySensorDeviceClass.DOOR)
+        sensor = SpcZoneStateBinarySensor(
+            _make_entry(), zone, BinarySensorDeviceClass.DOOR
+        )
         assert sensor.is_on is True
 
     def test_zone_state_is_off_when_closed(self):
         zone = _make_zone(state=False)
-        sensor = SpcZoneStateBinarySensor(_make_entry(), zone, BinarySensorDeviceClass.DOOR)
+        sensor = SpcZoneStateBinarySensor(
+            _make_entry(), zone, BinarySensorDeviceClass.DOOR
+        )
         assert sensor.is_on is False
 
     def test_zone_state_device_class_set(self):
         zone = _make_zone(state=False)
-        sensor = SpcZoneStateBinarySensor(_make_entry(), zone, BinarySensorDeviceClass.MOTION)
+        sensor = SpcZoneStateBinarySensor(
+            _make_entry(), zone, BinarySensorDeviceClass.MOTION
+        )
         assert sensor._attr_device_class == BinarySensorDeviceClass.MOTION
 
     def test_zone_state_device_class_none_for_other(self):

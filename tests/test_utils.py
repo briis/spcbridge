@@ -1,6 +1,5 @@
 """Tests for utility functions in spcbridge."""
 
-import pytest
 from pyspcbridge.const import ArmMode, DoorMode
 
 from custom_components.spcbridge.utils import (
