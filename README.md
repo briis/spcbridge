@@ -1,7 +1,14 @@
 # spcbridge
 
 > [!NOTE]
-> This is a clone from the original Lundix IT Home Assistant Integration. This version is updated to run on Python 3.14 and as such the minimum Home Assistant version has also been changed. The aim is to add an Alarm Panel entity to this integration and that is being worked on right now.
+> This is a clone from the original Lundix IT Home Assistant Integration. The reason for cloning and not forking is that I needed to make so many changes to almost all files, due to the upgrade to Home Assistant 2026.3.x and Python 3.1.4 dev environment, that I did not want to make changes directly to the initial code base.
+In essence the functionality reamings the same, and if you want to replace the original Lundix Integration with this one, it will work the same way.
+One addition is however the new Alarm Control Panel entity which currently has 4 modes defined:
+* Disarmed - unset
+* Arm Home - set_a
+* Arm Night - set_b
+* Armed - set_delayed
+This new entity, can be used with any card that supports an Alarm Control Panel entity.
 
 ## Prerequisites
 - Vanderbilt SPC panel, firmware version >= 3.8.5
@@ -33,6 +40,9 @@ The SPC Bridge HA integration consists of following parts:
 ## Installation
 
 Before proceeding with the installation of this custom integration, make sure you have the the SPC Bridge Generic (lite) installed and properly configured.
+
+> [!NOTE]
+> If you have the Lundix Integration installed, you must remove that first, both by deleting the Integration from the Settings/Devices and from HACS. Remember to restart Home Assistant before proceding.
 
 ### HACS
 
