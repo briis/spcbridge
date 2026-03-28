@@ -73,7 +73,9 @@ class SpcAreaAlarmControlPanel(SpcPanelEntity, AlarmControlPanelEntity):
 
     def __init__(self, entry: ConfigEntry, panel: Panel, area: Area) -> None:
         """Initialize the alarm control panel."""
-        super().__init__(entry=entry, panel=panel, suffix=f"area_{area.id}_alarm_control_panel")
+        super().__init__(
+            entry=entry, panel=panel, suffix=f"area_{area.id}_alarm_control_panel"
+        )
         self._area = area
         self._default_code: str = entry.options.get(CONF_CODE, DEFAULT_CONF_CODE)
 
