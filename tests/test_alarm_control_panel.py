@@ -152,3 +152,9 @@ class TestSpcAreaAlarmControlPanel:
         panel._area.async_command = AsyncMock()
         await panel.async_alarm_arm_away("1234")
         panel._area.async_command.assert_called_once_with("set_delayed", "1234")
+
+    async def test_async_alarm_arm_custom_bypass_sends_set_delayed_forced_command(self):
+        panel = self._make_panel(code="1234")
+        panel._area.async_command = AsyncMock()
+        await panel.async_alarm_arm_custom_bypass("1234")
+        panel._area.async_command.assert_called_once_with("set_delayed_forced", "1234")
