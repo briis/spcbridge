@@ -12,7 +12,9 @@ from custom_components.spcbridge.alarm_control_panel import (
 from custom_components.spcbridge.const import CONF_CODE, DEFAULT_CONF_CODE
 
 
-def make_area(mode=ArmMode.UNSET, intrusion=False, fire=False, changed_by="", pending_exit=False):
+def make_area(
+    mode=ArmMode.UNSET, intrusion=False, fire=False, changed_by="", pending_exit=False
+):
     """Create a mock Area with the given state."""
     area = MagicMock()
     area.id = 1
