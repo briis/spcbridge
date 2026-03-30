@@ -77,8 +77,8 @@ Logical representation of the Alarm System (all areas).
 #### Entities
 | Entity             | Entity ID                                 | Values                  | Description                                    |
 | ------------------ | ----------------------------------------- | ----------------------- | ---------------------------------------------- |
-| `Alarm Control Panel` | `alarm_control_panel.<device_name>` | `Disarmed`: `Disarmed`, `Armed Home`: `Partset A`, `Armed Night`: `Partset B`, `Armed`: `Armed with Delay` | Entity that can be used instead of the Action Calls<br>**Note** Setting a code has only been tested with Method 1 above |
-| `Arm mode`         | `sensor.<device_name>_arm_mode`           | `Disarmed`, `Partset A`, `Partset B`, `Armed`, `Partset A Partly`, `Partset B Partly`, `Armed Partly`, `Unknown`   | The current active arm mode.                |
+| `Alarm Control Panel` | `alarm_control_panel.<device_name>` | `Disarmed`: `Disarmed`, `Armed Home`: `Partset A`, `Armed Night`: `Partset B`, `Armed`: `Armed with Delay`, `Custom Bypass`: Armed with delay, bypassing open sensors | Entity that can be used instead of the Action Calls<br>**Note** Setting a code has only been tested with Method 1 above |
+| `Arm mode`         | `sensor.<device_name>_arm_mode`           | `Disarmed`, `Partset A`, `Partset B`, `Armed`, `Partset A Partly`, `Partset B Partly`, `Armed Partly`, `Armed Partly with Delay`, `Unknown`   | The current active arm mode.                |
 | `Event message`    | `sensor.<device_name>_event_message`      | SPC events              | SPC events as text                             |
 | `Fire`             | `binary_sensor.<device_name>_fire`        | `Off`, `On`             | System has an active fire alarm                |
 | `Intrusion`        | `binary_sensor.<device_name>_intrusion`   | `Off`, `On`             | System has an active intrusion alarm           |
