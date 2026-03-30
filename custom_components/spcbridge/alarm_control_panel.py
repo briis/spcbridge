@@ -52,6 +52,9 @@ def _alarm_state(area: Area) -> AlarmControlPanelState | None:
     if area.intrusion or area.fire:
         return AlarmControlPanelState.TRIGGERED
 
+    if area.pending_exit:
+        return AlarmControlPanelState.ARMING
+
     mode_to_state = {
         ArmMode.UNSET: AlarmControlPanelState.DISARMED,
         ArmMode.PART_SET_A: AlarmControlPanelState.ARMED_HOME,
@@ -69,6 +72,7 @@ class SpcAreaAlarmControlPanel(SpcPanelEntity, AlarmControlPanelEntity):
         AlarmControlPanelEntityFeature.ARM_HOME
         | AlarmControlPanelEntityFeature.ARM_AWAY
         | AlarmControlPanelEntityFeature.ARM_NIGHT
+        | AlarmControlPanelEntityFeature.ARM_CUSTOM_BYPASS
     )
 
     def __init__(self, entry: ConfigEntry, panel: Panel, area: Area) -> None:
@@ -129,3 +133,7 @@ class SpcAreaAlarmControlPanel(SpcPanelEntity, AlarmControlPanelEntity):
     async def async_alarm_arm_away(self, code: str | None = None) -> None:
         """Send delayed arm Full Set command."""
         await self._area.async_command("set_delayed", self._effective_code(code))
+
+    async def async_alarm_arm_custom_bypass(self, code: str | None = None) -> None:
+        """Send delayed forced arm command."""
+        await self._area.async_command("set_delayed_forced", self._effective_code(code))

@@ -12,7 +12,9 @@ from custom_components.spcbridge.alarm_control_panel import (
 from custom_components.spcbridge.const import CONF_CODE, DEFAULT_CONF_CODE
 
 
-def make_area(mode=ArmMode.UNSET, intrusion=False, fire=False, changed_by=""):
+def make_area(
+    mode=ArmMode.UNSET, intrusion=False, fire=False, changed_by="", pending_exit=False
+):
     """Create a mock Area with the given state."""
     area = MagicMock()
     area.id = 1
@@ -21,6 +23,7 @@ def make_area(mode=ArmMode.UNSET, intrusion=False, fire=False, changed_by=""):
     area.intrusion = intrusion
     area.fire = fire
     area.changed_by = changed_by
+    area.pending_exit = pending_exit
     return area
 
 
@@ -61,6 +64,14 @@ class TestAlarmState:
 
     def test_triggered_takes_priority_over_armed_state(self):
         area = make_area(mode=ArmMode.FULL_SET, intrusion=True, fire=True)
+        assert _alarm_state(area) == AlarmControlPanelState.TRIGGERED
+
+    def test_arming_when_pending_exit(self):
+        area = make_area(mode=ArmMode.UNSET, pending_exit=True)
+        assert _alarm_state(area) == AlarmControlPanelState.ARMING
+
+    def test_triggered_takes_priority_over_pending_exit(self):
+        area = make_area(mode=ArmMode.UNSET, intrusion=True, pending_exit=True)
         assert _alarm_state(area) == AlarmControlPanelState.TRIGGERED
 
     def test_none_for_partly_set_modes(self):
@@ -152,3 +163,9 @@ class TestSpcAreaAlarmControlPanel:
         panel._area.async_command = AsyncMock()
         await panel.async_alarm_arm_away("1234")
         panel._area.async_command.assert_called_once_with("set_delayed", "1234")
+
+    async def test_async_alarm_arm_custom_bypass_sends_set_delayed_forced_command(self):
+        panel = self._make_panel(code="1234")
+        panel._area.async_command = AsyncMock()
+        await panel.async_alarm_arm_custom_bypass("1234")
+        panel._area.async_command.assert_called_once_with("set_delayed_forced", "1234")

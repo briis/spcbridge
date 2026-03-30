@@ -2,6 +2,7 @@
   "domain": "spcbridge",
   "name": "Vanderbilt SPC Bridge",
   "codeowners": [
+    "@Goran58",
     "@briis"
   ],
   "config_flow": true,
