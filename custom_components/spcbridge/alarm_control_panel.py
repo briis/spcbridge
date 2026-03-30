@@ -52,6 +52,9 @@ def _alarm_state(area: Area) -> AlarmControlPanelState | None:
     if area.intrusion or area.fire:
         return AlarmControlPanelState.TRIGGERED
 
+    if area.pending_exit:
+        return AlarmControlPanelState.ARMING
+
     mode_to_state = {
         ArmMode.UNSET: AlarmControlPanelState.DISARMED,
         ArmMode.PART_SET_A: AlarmControlPanelState.ARMED_HOME,
