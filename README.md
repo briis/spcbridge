@@ -4,6 +4,8 @@
 > This is a clone from the original Lundix IT Home Assistant Integration. The reason for cloning and not forking is that I needed to make so many changes to almost all files, due to the upgrade to Home Assistant 2026.3.x and Python 3.1.4 dev environment, that I did not want to make changes directly to the initial code base.
 In essence the functionality reamings the same, and if you want to replace the original Lundix Integration with this one, it will work the same way.
 One addition is however the new Alarm Control Panel entity. See more information in the *Alarm System (panel)* section below.
+>
+> **This Integration is not supported by Lundix IT, all issue requests have to be submitted in this repository**
 
 
 ## Prerequisites
