@@ -14,6 +14,7 @@ from homeassistant.components.alarm_control_panel.const import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.event import async_call_later
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -133,6 +134,38 @@ class SpcAreaAlarmControlPanel(SpcPanelEntity, AlarmControlPanelEntity):
     async def async_alarm_arm_away(self, code: str | None = None) -> None:
         """Send delayed arm Full Set command."""
         await self._area.async_command("set_delayed", self._effective_code(code))
+        # Schedule a fallback state refresh in case the WebSocket "CG" (armed) event
+        # is missed (e.g. brief reconnect during the exit period), which would leave
+        # the entity stuck in ARMING forever.
+        timeout = max(self._area.exittime + 15, 30)
+        async_call_later(self.hass, timeout, self._async_pending_exit_timeout)
+
+    @callback
+    def _async_pending_exit_timeout(self, _now: object) -> None:
+        """Refresh from SPC if still stuck in ARMING after exit time."""
+        if self._area.pending_exit:
+            _LOGGER.debug(
+                "Area %s still in pending_exit after timeout; refreshing state from SPC",
+                self._area.id,
+            )
+            self.hass.async_create_task(self._async_refresh_area_state())
+
+    async def _async_refresh_area_state(self) -> None:
+        """Poll current area mode from SPC via HTTP and update cached state."""
+        try:
+            areas = await self._area._http_client.async_get_areas(  # noqa: SLF001
+                id=self._area.id
+            )
+            if areas and isinstance(areas, list):
+                self._area._bridge.set_value(  # noqa: SLF001
+                    "area",
+                    self._area.id,
+                    {"mode": areas[0].get("mode"), "pending_exit": False},
+                )
+        except OSError:
+            _LOGGER.warning(
+                "Failed to refresh area %s state after arming timeout", self._area.id
+            )
 
     async def async_alarm_arm_custom_bypass(self, code: str | None = None) -> None:
         """Send delayed forced arm command."""

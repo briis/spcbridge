@@ -12,18 +12,17 @@ from custom_components.spcbridge.alarm_control_panel import (
 from custom_components.spcbridge.const import CONF_CODE, DEFAULT_CONF_CODE
 
 
-def make_area(
-    mode=ArmMode.UNSET, intrusion=False, fire=False, changed_by="", pending_exit=False
-):
+def make_area(**kwargs):
     """Create a mock Area with the given state."""
     area = MagicMock()
     area.id = 1
     area.name = "Test Area"
-    area.mode = mode
-    area.intrusion = intrusion
-    area.fire = fire
-    area.changed_by = changed_by
-    area.pending_exit = pending_exit
+    area.mode = kwargs.get("mode", ArmMode.UNSET)
+    area.intrusion = kwargs.get("intrusion", False)
+    area.fire = kwargs.get("fire", False)
+    area.changed_by = kwargs.get("changed_by", "")
+    area.pending_exit = kwargs.get("pending_exit", False)
+    area.exittime = kwargs.get("exittime", 30)
     return area
 
 
@@ -161,8 +160,52 @@ class TestSpcAreaAlarmControlPanel:
     async def test_async_alarm_arm_away_sends_set_delayed_command(self):
         panel = self._make_panel(code="1234")
         panel._area.async_command = AsyncMock()
-        await panel.async_alarm_arm_away("1234")
+        panel.hass = MagicMock()
+        with patch(
+            "custom_components.spcbridge.alarm_control_panel.async_call_later"
+        ) as mock_call_later:
+            await panel.async_alarm_arm_away("1234")
         panel._area.async_command.assert_called_once_with("set_delayed", "1234")
+        mock_call_later.assert_called_once()
+
+    def test_pending_exit_timeout_does_nothing_when_not_arming(self):
+        panel = self._make_panel(pending_exit=False)
+        panel.hass = MagicMock()
+        panel._async_pending_exit_timeout(None)
+        panel.hass.async_create_task.assert_not_called()
+
+    def test_pending_exit_timeout_schedules_refresh_when_arming(self):
+        panel = self._make_panel(pending_exit=True)
+        panel.hass = MagicMock()
+        panel.hass.async_create_task = MagicMock(side_effect=lambda coro: coro.close())
+        panel._async_pending_exit_timeout(None)
+        panel.hass.async_create_task.assert_called_once()
+
+    async def test_refresh_area_state_updates_model_on_success(self):
+        panel = self._make_panel()
+        panel._area._http_client.async_get_areas = AsyncMock(return_value=[{"mode": 3}])
+        await panel._async_refresh_area_state()
+        panel._area._bridge.set_value.assert_called_once_with(
+            "area", panel._area.id, {"mode": 3, "pending_exit": False}
+        )
+
+    async def test_refresh_area_state_handles_oserror(self):
+        panel = self._make_panel()
+        panel._area._http_client.async_get_areas = AsyncMock(side_effect=OSError)
+        # Should not raise
+        await panel._async_refresh_area_state()
+        panel._area._bridge.set_value.assert_not_called()
+
+    async def test_arm_away_timeout_uses_exittime_plus_buffer(self):
+        panel = self._make_panel(exittime=60)
+        panel._area.async_command = AsyncMock()
+        panel.hass = MagicMock()
+        with patch(
+            "custom_components.spcbridge.alarm_control_panel.async_call_later"
+        ) as mock_call_later:
+            await panel.async_alarm_arm_away("1234")
+        timeout = mock_call_later.call_args[0][1]
+        assert timeout == 60 + 15  # exittime + buffer
 
     async def test_async_alarm_arm_custom_bypass_sends_set_delayed_forced_command(self):
         panel = self._make_panel(code="1234")
