@@ -1,6 +1,6 @@
 colorlog==6.10.1
 homeassistant==2026.4.1
-aiohasupervisor>=0.4.0
+aiohasupervisor>=0.4.3
 pip>=26.0.1
 ruff==0.15.11
 pytest==9.0.2
