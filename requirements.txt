@@ -2,7 +2,7 @@ colorlog==6.10.1
 homeassistant==2026.4.1
 aiohasupervisor>=0.4.3
 pip>=26.0.1
-ruff==0.15.11
+ruff==0.15.12
 pytest==9.0.3
 pytest-asyncio==1.3.0
 pyspcbridge==0.6.3
