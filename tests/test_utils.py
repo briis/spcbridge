@@ -1,3 +1,4 @@
+# Copyright (c) 2024 Lundix IT and (c) 2026 @briis
 """Tests for utility functions in spcbridge."""
 
 from pyspcbridge.const import ArmMode, DoorMode

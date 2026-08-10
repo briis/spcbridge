@@ -1,3 +1,4 @@
+# Copyright (c) 2024 Lundix IT and (c) 2026 @briis
 """Tests for config_flow utility functions."""
 
 from pyspcbridge.const import ZoneType

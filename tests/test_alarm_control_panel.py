@@ -1,3 +1,4 @@
+# Copyright (c) 2024 Lundix IT and (c) 2026 @briis
 """Tests for the SPC alarm control panel."""
 
 from unittest.mock import AsyncMock, MagicMock, patch

@@ -19,3 +19,4 @@ config/*
 
 custom_components/.DS_Store
 .DS_Store
+.claude/settings.json

@@ -1,3 +1,4 @@
+# Copyright (c) 2024 Lundix IT and (c) 2026 @briis
 """Support for acre/Vanderbilt SPC alarm system connected via Lundix's SPC Bridge."""
 
 import logging

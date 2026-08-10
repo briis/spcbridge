@@ -1,3 +1,4 @@
+# Copyright (c) 2024 Lundix IT and (c) 2026 @briis
 """SPC."""
 
 from __future__ import annotations

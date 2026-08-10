@@ -1,3 +1,4 @@
+# Copyright (c) 2024 Lundix IT and (c) 2026 @briis
 """A SPC zone entity base class."""
 
 from __future__ import annotations

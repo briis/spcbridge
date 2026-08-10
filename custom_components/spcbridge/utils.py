@@ -1,3 +1,4 @@
+# Copyright (c) 2024 Lundix IT and (c) 2026 @briis
 """Utility functions for SPCBridge."""
 
 from ipaddress import IPv6Address, ip_address
