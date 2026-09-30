@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ruff check:*)",
+      "Bash(python3 -c \"from homeassistant.config_entries import ConfigEntry; from homeassistant.data_entry_flow import FlowResult; print\\(''''FlowResult ok''''\\)\")",
+      "Bash(python3 -c \"from homeassistant.config_entries import ConfigFlowResult; print\\(''ConfigFlowResult ok''\\)\")",
+      "Bash(grep -n 'for _z in z\\\\]\\)}$\\\\|for _o in o\\\\]\\)}$\\\\|for _d in d\\\\]\\)}$' /workspaces/spcbridge/custom_components/spcbridge/config_flow.py)",
+      "Bash(grep -n 'for _a in a\\\\]\\)}$' /workspaces/spcbridge/custom_components/spcbridge/config_flow.py)",
+      "Bash(python3 -c \"import pyspcbridge; print\\(''''ok''''\\)\")",
+      "Bash(python3 -c \"from pyspcbridge.const import ArmMode, DoorMode; print\\(list\\(ArmMode\\)\\)\")",
+      "Bash(python3 -c \"from pyspcbridge.const import DoorMode; print\\(list\\(DoorMode\\)\\)\")",
+      "Bash(python3 -c \"import pytest; print\\(pytest.__version__\\)\")",
+      "Bash(pip show:*)",
+      "Bash(python3 -c \"from pyspcbridge.area import Area; import inspect; print\\(inspect.getsource\\(Area\\)\\)\")",
+      "Bash(python3 -c \"from pyspcbridge.area import Area; import inspect; src = inspect.getsource\\(Area\\); print\\(src[2000:4000]\\)\")",
+      "Bash(python -m pytest tests/test_alarm_control_panel.py::TestSpcAreaAlarmControlPanel -x -q)",
+      "Bash(python3 -c \"import pyspcbridge; print\\(pyspcbridge.__file__\\)\")",
+      "Bash(find /workspaces/spcbridge/config -type f \\\\\\(-name *.json -o -name *.py \\\\\\))",
+      "Bash(python -m pytest tests/test_alarm_control_panel.py -v)",
+      "Bash(scripts/lint)"
+    ]
+  }
+}
