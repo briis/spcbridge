@@ -11,7 +11,7 @@ One addition is however the new Alarm Control Panel entity. See more information
 ## Prerequisites
 - Vanderbilt SPC panel, firmware version >= 3.8.5
 - [SPC Bridge Generic Lite](https://www.lundix.se/spc-bridge-generic-lite/) or [SPC Bridge Generic](https://www.lundix.se/spc-bridge-generic/) from Lundix IT.
-- Home Assistant system, Core version >= 2026.3.0, Frontend version >= 20260312.0
+- Home Assistant system, Core version >= 2026.8.0, Frontend version >= 20260312.0
 
 > [!NOTE]
 > The software module **SPC Web Gateway** isn't supported by this integration.
