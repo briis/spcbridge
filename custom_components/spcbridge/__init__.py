@@ -4,7 +4,6 @@
 import logging
 from dataclasses import dataclass
 
-import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import (
     ATTR_CODE,
@@ -38,6 +37,7 @@ from pyspcbridge.output import Output
 from pyspcbridge.panel import Panel
 from pyspcbridge.zone import Zone
 
+from .compat import vol
 from .const import (
     ATTR_COMMAND,
     CONF_AREAS_INCLUDE_DATA,

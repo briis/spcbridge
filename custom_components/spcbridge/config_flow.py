@@ -9,7 +9,6 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 import homeassistant.helpers.config_validation as cv
-import voluptuous as vol
 from homeassistant import config_entries, exceptions
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
@@ -27,6 +26,7 @@ from homeassistant.helpers.selector import (
 from pyspcbridge import SpcBridge
 from pyspcbridge.const import ZoneType
 
+from .compat import vol
 from .const import (
     CONF_AREAS_INCLUDE_DATA,
     CONF_CODE,
@@ -74,6 +74,7 @@ DEFAULT_FIRE_ZONE_OPTION = "smoke"
 def generate_schema(object_type: str, spc_objects: list) -> vol.Schema:  # noqa: PLR0912
     """Generate schema."""
     schema: dict[vol.Marker, Any] = {}
+    options: list[SelectOptionDict]
 
     if object_type == "spc_users":
         for _o in spc_objects:
@@ -113,7 +114,7 @@ def generate_schema(object_type: str, spc_objects: list) -> vol.Schema:  # noqa:
             obj_id = _o["id"]
             name = _o["name"]
             zone_type = _o["type"]
-            options: list[SelectOptionDict] = [
+            options = [
                 {"value": "exclude", "label": f"{name}[{obj_id}] - Don't include"},
                 {"value": "motion", "label": f"{name}[{obj_id}] - Motion sensor"},
                 {"value": "door", "label": f"{name}[{obj_id}] - Door contact sensor"},
@@ -184,6 +185,7 @@ def generate_schema(object_type: str, spc_objects: list) -> vol.Schema:  # noqa:
 def generate_option_schema(object_type: str, objects: dict) -> vol.Schema:  # noqa: PLR0912, PLR0915
     """Generate option schema."""
     schema: dict[vol.Marker, Any] = {}
+    options: list[SelectOptionDict]
 
     if object_type == "spc_users":
         for _o in objects.values():
@@ -234,7 +236,7 @@ def generate_option_schema(object_type: str, objects: dict) -> vol.Schema:  # no
             obj_id = _o.get("id")
             if obj_id is not None:
                 name = _o.get("name")
-                options: list[SelectOptionDict] = [
+                options = [
                     {"value": "exclude", "label": f"{name}[{obj_id}] - Don't include"},
                     {"value": "motion", "label": f"{name}[{obj_id}] - Motion sensor"},
                     {
@@ -507,7 +509,7 @@ async def test_connection(hass: HomeAssistant, bridge_data: dict) -> dict:
 
 def validate_spc_users_data(data: dict) -> dict:
     """Validate SPC user data."""
-    errors = {}
+    errors: dict[str, str] = {}
     ha_pincode_schema = vol.All(vol.Coerce(int), vol.Range(min=0, max=9999999999))
     spc_password_schema = vol.All(vol.Coerce(str), vol.Length(min=1, max=16))
     for user in data.values():
@@ -535,12 +537,11 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SPC."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
 
     def __init__(self) -> None:
         """Initialize the config flow."""
-        self.data = {}
-        self.options = {
+        self.data: dict[str, Any] = {}
+        self.options: dict[str, Any] = {
             CONF_IP_ADDRESS: "",
             CONF_PORT: DEFAULT_BRIDGE_PORT,
             CONF_GET_USERNAME: DEFAULT_BRIDGE_GET_USERNAME,
@@ -557,13 +558,13 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_DOORS_INCLUDE_DATA: {},
             CONF_CODE: DEFAULT_CONF_CODE,
         }
-        self.spc_data = {}
+        self.spc_data: dict[str, Any] = {}
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the initial step."""
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None:
             try:
                 ipaddress.ip_address(user_input[CONF_IP_ADDRESS])
@@ -592,7 +593,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the credentials step."""
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None:
             try:
                 bridge_data = {
@@ -654,7 +655,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the discovered step."""
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None and not errors:
             return await self.async_step_user_identify_method()
 
@@ -671,7 +672,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle user identify method step."""
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None and not errors:
             self.options[CONF_USER_IDENTIFY_METHOD] = user_input[
                 CONF_USER_IDENTIFY_METHOD
@@ -690,14 +691,14 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ): SelectSelector(
                         SelectSelectorConfig(
                             options=[
-                                {
-                                    "value": CONF_USER_IDENTIFY_BY_ID,
-                                    "label": "Include SPC User ID in keypad code",
-                                },
-                                {
-                                    "value": CONF_USER_IDENTIFY_BY_MAP,
-                                    "label": "Link keypad codes to SPC users",
-                                },
+                                SelectOptionDict(
+                                    value=CONF_USER_IDENTIFY_BY_ID,
+                                    label="Include SPC User ID in keypad code",
+                                ),
+                                SelectOptionDict(
+                                    value=CONF_USER_IDENTIFY_BY_MAP,
+                                    label="Link keypad codes to SPC users",
+                                ),
                             ]
                         )
                     )
@@ -710,7 +711,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle SPC users step."""
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None and not errors:
             users_data = {}
             for user in self.spc_data["users"]:
@@ -744,7 +745,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the alarm areas select step."""
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None:
             for area in self.spc_data["areas"]:
                 if f"area_{area['id']}" in user_input["include_areas"]:
@@ -768,7 +769,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the alarm zones select step."""
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None:
             for zone in self.spc_data["zones"]:
                 zone["include_mode"] = user_input.get(
@@ -791,7 +792,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the outputs select step."""
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None:
             for output in self.spc_data["outputs"]:
                 if f"output_{output['id']}" in user_input["include_outputs"]:
@@ -815,7 +816,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the door locks select step."""
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None:
             for door in self.spc_data["doors"]:
                 if f"door_{door['id']}" in user_input["include_doors"]:
@@ -839,7 +840,7 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the confirm step."""
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None and not errors:
             return self.async_create_entry(
                 title=f"SPC Bridge [{self.spc_data['panel'].get('serial')}]",
@@ -857,18 +858,16 @@ class SpcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: config_entries.ConfigEntry,
+        config_entry: config_entries.ConfigEntry,  # noqa: ARG004
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return OptionsFlowHandler(config_entry)
+        return OptionsFlowHandler()
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle a option flow for SPC."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_data = config_entry.data
+    bridge_data: dict[str, Any]
 
     async def async_step_init(
         self, _user_input: dict[str, Any] | None = None
@@ -909,14 +908,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 ): SelectSelector(
                     SelectSelectorConfig(
                         options=[
-                            {
-                                "value": CONF_USER_IDENTIFY_BY_ID,
-                                "label": "Include the SPC User ID in the Keypad Code",
-                            },
-                            {
-                                "value": CONF_USER_IDENTIFY_BY_MAP,
-                                "label": "Link Keypad Codes to SPC users",
-                            },
+                            SelectOptionDict(
+                                value=CONF_USER_IDENTIFY_BY_ID,
+                                label="Include the SPC User ID in the Keypad Code",
+                            ),
+                            SelectOptionDict(
+                                value=CONF_USER_IDENTIFY_BY_MAP,
+                                label="Link Keypad Codes to SPC users",
+                            ),
                         ]
                     )
                 )
@@ -934,7 +933,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> ConfigFlowResult:
         """Handle the spc users option step."""
         spc = self.hass.data[DOMAIN][self.config_entry.entry_id]
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None:
             users_data = {}
             for user in spc.users.values():
@@ -977,7 +976,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the bridge option step."""
-        errors = {}
+        errors: dict[str, str] = {}
         default_ip_address = self.config_entry.options[CONF_IP_ADDRESS]
 
         if user_input is not None:
@@ -1010,7 +1009,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle the bridge credentials option step."""
-        errors = {}
+        errors: dict[str, str] = {}
         default_values = {
             CONF_GET_USERNAME: self.config_entry.options[CONF_GET_USERNAME],
             CONF_GET_PASSWORD: self.config_entry.options[CONF_GET_PASSWORD],
@@ -1085,13 +1084,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=options)
 
         areas_data = {}
-        options = self.config_entry.options
+        current_options = self.config_entry.options
         for area in spc.areas.values():
             d = {
                 "id": area.id,
                 "name": area.name,
             }
-            if options[CONF_AREAS_INCLUDE_DATA].get(str(area.id), "") == "include":
+            if (
+                current_options[CONF_AREAS_INCLUDE_DATA].get(str(area.id), "")
+                == "include"
+            ):
                 d["include"] = True
             else:
                 d["include"] = False
@@ -1119,13 +1121,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=options)
 
         zones_data = {}
-        options = self.config_entry.options
+        current_options = self.config_entry.options
         for zone in spc.zones.values():
             d = {
                 "id": zone.id,
                 "name": zone.name,
             }
-            if mode := options[CONF_ZONES_INCLUDE_DATA].get(str(zone.id)):
+            if mode := current_options[CONF_ZONES_INCLUDE_DATA].get(str(zone.id)):
                 d["include"] = mode
             else:
                 d["include"] = "exclude"
@@ -1153,13 +1155,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=options)
 
         outputs_data = {}
-        options = self.config_entry.options
+        current_options = self.config_entry.options
         for output in spc.outputs.values():
             d = {
                 "id": output.id,
                 "name": output.name,
             }
-            if options[CONF_OUTPUTS_INCLUDE_DATA].get(str(output.id), "") == "include":
+            if (
+                current_options[CONF_OUTPUTS_INCLUDE_DATA].get(str(output.id), "")
+                == "include"
+            ):
                 d["include"] = True
             else:
                 d["include"] = False
@@ -1187,13 +1192,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_create_entry(title="", data=options)
 
         doors_data = {}
-        options = self.config_entry.options
+        current_options = self.config_entry.options
         for door in spc.doors.values():
             d = {
                 "id": door.id,
                 "name": door.name,
             }
-            if options[CONF_DOORS_INCLUDE_DATA].get(str(door.id), "") == "include":
+            if (
+                current_options[CONF_DOORS_INCLUDE_DATA].get(str(door.id), "")
+                == "include"
+            ):
                 d["include"] = True
             else:
                 d["include"] = False
